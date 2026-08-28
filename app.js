@@ -159,41 +159,41 @@ const zoneDefs = [
   {
     lat: 13.0240, lng: 80.2410, type: 'flood', name: 'Kotturpuram Low-Lying Flood Belt', color: '#3ba6e8', radius: 900, severity: 9,
     evidence: [
-      'IMD bulletin recorded 340mm rainfall in 24h during monsoon spell',
-      'GCC flood hazard mapping classifies stretch as high inundation risk',
-      'Waterlogging depth up to 1.2m recorded in previous monsoon spell'
+      { source: 'IMD Chennai Rainfall Bulletin', sourceType: 'weather_data', summary: 'IMD bulletin recorded 340mm rainfall in 24h during monsoon spell', date: '2024-10-16' },
+      { source: 'Greater Chennai Corporation flood map', sourceType: 'geospatial', summary: 'GCC flood hazard mapping classifies stretch as high inundation risk', date: '2024-06-01' },
+      { source: 'TN Disaster Management Dept incident log', sourceType: 'historical_incident', summary: 'Waterlogging depth up to 1.2m recorded in previous monsoon spell', date: '2023-12-04' }
     ]
   },
   {
     lat: 13.0620, lng: 80.2700, type: 'crime', name: 'Market Street Heavy Bottleneck', color: '#c25ce0', radius: 600, severity: 6,
     evidence: [
-      'Heavy commercial traffic creates 35-minute average delay during peak hours',
-      'Street vendors reduce available ambulance carriage width to 3.2m',
-      'Frequent congestion gridlocks flagged by traffic control'
+      { source: 'Chennai Traffic Police congestion report', sourceType: 'govt_report', summary: 'Heavy commercial traffic creates 35-minute average delay during peak hours', date: '2024-08-20' },
+      { source: 'OpenStreetMap road-width survey', sourceType: 'geospatial', summary: 'Street vendors reduce available ambulance carriage width to 3.2m', date: '2024-07-12' },
+      { source: 'Chennai Traffic Control Centre log', sourceType: 'historical_incident', summary: 'Frequent congestion gridlocks flagged by traffic control', date: '2024-09-30' }
     ]
   },
   {
     lat: 12.9800, lng: 80.1500, type: 'fire', name: 'Industrial Corridor Bypass Hazard', color: '#e8543e', radius: 800, severity: 7,
     evidence: [
-      'Fire department classifies corridor as Category-B industrial hazard zone',
-      'Road widening construction active on eastern lane',
-      'Heavy container vehicle movements slow emergency traffic'
+      { source: 'Tamil Nadu Fire & Rescue Services risk register', sourceType: 'govt_report', summary: 'Fire department classifies corridor as Category-B industrial hazard zone', date: '2024-05-18' },
+      { source: 'Chennai Metropolitan Development Authority works bulletin', sourceType: 'govt_report', summary: 'Road widening construction active on eastern lane', date: '2024-09-05' },
+      { source: 'OpenStreetMap freight-road layer', sourceType: 'geospatial', summary: 'Heavy container vehicle movements slow emergency traffic', date: '2024-08-11' }
     ]
   },
   {
     lat: 13.0100, lng: 80.2000, type: 'landslide', name: 'Canal Embankment Slope Risk', color: '#a67c3d', radius: 700, severity: 5,
     evidence: [
-      'PWD embankment inspection flagged active soil erosion along canal side',
-      'Road surface saturation risk rises sharply during heavy rain',
-      'Single-lane diversion active near canal bridge'
+      { source: 'Tamil Nadu PWD embankment inspection', sourceType: 'govt_report', summary: 'PWD embankment inspection flagged active soil erosion along canal side', date: '2024-07-26' },
+      { source: 'IMD Chennai Rainfall Bulletin', sourceType: 'weather_data', summary: 'Road surface saturation risk rises sharply during heavy rain', date: '2024-10-16' },
+      { source: 'Greater Chennai Corporation roadworks notice', sourceType: 'geospatial', summary: 'Single-lane diversion active near canal bridge', date: '2024-09-14' }
     ]
   },
   {
     lat: 13.0500, lng: 80.2100, type: 'accident', name: 'Kathipara Signal-Free Accident Junction', color: '#ef4444', radius: 600, severity: 8,
     evidence: [
-      'Traffic police logs record 18 major vehicle collisions in 12 months',
-      'Complex flyover merge points increase collision risk',
-      'Emergency vehicles advised to reduce speed to under 30 km/h'
+      { source: 'Tamil Nadu Traffic Police incident log', sourceType: 'historical_incident', summary: 'Traffic police logs record 18 major vehicle collisions in 12 months', date: '2024-08-31' },
+      { source: 'OpenStreetMap junction geometry', sourceType: 'geospatial', summary: 'Complex flyover merge points increase collision risk', date: '2024-06-22' },
+      { source: 'Chennai Traffic Police emergency advisory', sourceType: 'govt_report', summary: 'Emergency vehicles advised to reduce speed to under 30 km/h', date: '2024-09-02' }
     ]
   }
 ];
@@ -395,21 +395,102 @@ function rankFacilities(startPos, triage, filterGovt, filterIcu, filterOxygen) {
   }).sort((a, b) => b.score - a.score);
 }
 
-// ---------- 8. Leaflet Map Setup & Markers ----------
-const map = L.map('map', { zoomControl: true }).setView([13.0200, 80.1800], 11);
-L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-  attribution: '&copy; OpenStreetMap &copy; CARTO', maxZoom: 19
-}).addTo(map);
+// ---------- 8. Google Maps Setup & Markers ----------
+const googleMapStyles = [
+  { elementType: 'geometry', stylers: [{ color: '#111b2a' }] },
+  { elementType: 'labels.text.fill', stylers: [{ color: '#9fb0c4' }] },
+  { elementType: 'labels.text.stroke', stylers: [{ color: '#111b2a' }] },
+  { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#26384e' }] },
+  { featureType: 'road.highway', elementType: 'geometry', stylers: [{ color: '#38536d' }] },
+  { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#071522' }] },
+  { featureType: 'poi', elementType: 'geometry', stylers: [{ color: '#172638' }] }
+];
+const map = window.googleMapsUnavailable || !window.google
+  ? null
+  : new google.maps.Map(document.getElementById('map'), {
+      center: { lat: 12.9165, lng: 79.1325 }, zoom: 12, mapId: 'DEMO_MAP_ID',
+      styles: googleMapStyles, streetViewControl: false, fullscreenControl: false,
+      mapTypeControl: false
+    });
+function setMapView(lat, lng, zoom) {
+  if (!map) return;
+  map.setCenter({ lat, lng });
+  if (zoom !== undefined) map.setZoom(zoom);
+}
+function removeMapObject(object) {
+  if (!object) return;
+  if (typeof object.setMap === 'function') object.setMap(null);
+  else object.map = null;
+}
+function createGoogleMarker(lat, lng, html, title, popupHtml) {
+  if (!map || !google.maps.marker) return null;
+  const content = document.createElement('div');
+  content.className = 'divicon-marker';
+  content.innerHTML = html;
+  const marker = new google.maps.marker.AdvancedMarkerElement({ map, position: { lat, lng }, content, title });
+  if (popupHtml) {
+    const info = new google.maps.InfoWindow({ content: popupHtml });
+    marker.addListener('click', () => info.open({ map, anchor: marker }));
+  }
+  return marker;
+}
+function createGoogleCircle(options, popupHtml) {
+  if (!map) return null;
+  const circle = new google.maps.Circle({ ...options, map });
+  if (popupHtml) {
+    const info = new google.maps.InfoWindow({ content: popupHtml });
+    circle.addListener('click', event => info.open({ map, position: event.latLng }));
+  }
+  return circle;
+}
+
+function updateMapAvailability() {
+  const banner = document.getElementById('offline-banner');
+  const mapElement = document.getElementById('map');
+  const localOffline = typeof isOfflineMode !== 'undefined' && (isOfflineMode || window.demoMode);
+  const unavailable = !navigator.onLine || !map || localOffline;
+  if (banner) banner.style.display = unavailable ? 'flex' : 'none';
+  if (mapElement) mapElement.style.display = unavailable ? 'none' : 'block';
+  const statConn = document.getElementById('stat-conn');
+  if (statConn && unavailable) {
+    statConn.textContent = 'OFFLINE (Cached Facilities)';
+    statConn.style.color = 'var(--amber)';
+  }
+}
+window.addEventListener('online', updateMapAvailability);
+window.addEventListener('offline', updateMapAvailability);
+updateMapAvailability();
+
+const evidenceTypeMeta = {
+  govt_report: { label: 'Government report', icon: '&#x1F3DB;' },
+  weather_data: { label: 'Weather data', icon: '&#x2601;' },
+  historical_incident: { label: 'Historical incident', icon: '&#x26A0;' },
+  geospatial: { label: 'Geospatial data', icon: '&#x1F5FA;' },
+  satellite: { label: 'Satellite observation', icon: '&#x1F6F0;' }
+};
+
+function renderEvidenceGroups(evidence) {
+  const grouped = evidence.reduce((groups, item) => {
+    (groups[item.sourceType] ||= []).push(item);
+    return groups;
+  }, {});
+  return Object.entries(grouped).map(([sourceType, items]) => {
+    const meta = evidenceTypeMeta[sourceType] || { label: sourceType, icon: '&#x2022;' };
+    return `<div class="evidence-group"><div class="evidence-group-title"><span>${meta.icon}</span>${meta.label} (${items.length})</div>` +
+      `<ul>${items.map(item => `<li><b>${item.source}</b> <span class="evidence-date">${item.date}</span><br>${item.summary}</li>`).join('')}</ul></div>`;
+  }).join('');
+}
 
 // Render Risk Zone Circles
 zones.forEach(z => {
-  L.circle([z.lat, z.lng], {
-    radius: z.radius, color: z.color, weight: 1.4, fillColor: z.color, fillOpacity: 0.18
-  }).addTo(map).bindPopup(
+  createGoogleCircle({
+    center: { lat: z.lat, lng: z.lng }, radius: z.radius, strokeColor: z.color,
+    strokeWeight: 1.4, fillColor: z.color, fillOpacity: 0.18
+  },
     `<div style="font-family:'Inter',sans-serif">
       <b style="font-family:'Space Grotesk',sans-serif;font-size:14px;color:#fff">${z.name}</b><br>
       <span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#f59e0b;">Severity: ${z.severity}/10 · Hazard: ${z.type.toUpperCase()}</span>
-      <ul style="margin:8px 0 0 16px;padding:0;font-size:11.5px;color:#cbd5e1">${z.evidence.map(e => `<li>${e}</li>`).join('')}</ul>
+      <div class="evidence-groups">${renderEvidenceGroups(z.evidence)}</div>
      </div>`
   );
 });
@@ -422,20 +503,20 @@ const facIconEmoji = (type) => {
   else if (type === 'Super Specialty') emoji = '🏢';
   else if (type === 'Trauma Unit') emoji = '🚑';
   else if (type === 'Maternity Center') emoji = '👶';
-  return L.divIcon({ className: 'divicon-marker', html: emoji, iconSize: [22, 22] });
+  return emoji;
 };
 
-const facilityLayer = L.layerGroup().addTo(map);
+const facilityLayer = [];
 function renderFacilityMarkers() {
-  facilityLayer.clearLayers();
+  facilityLayer.forEach(removeMapObject);
+  facilityLayer.length = 0;
   facilities.forEach(fac => {
-  const marker = L.marker([fac.lat, fac.lng], { icon: facIconEmoji(fac.type) }).addTo(facilityLayer);
   const svcBadges = Object.entries(fac.services)
     .filter(([_, val]) => val)
     .map(([key, _]) => `<span style="background:rgba(16,185,129,0.15);color:#10b981;padding:1px 6px;border-radius:4px;font-size:10px;font-family:monospace;margin-right:3px;">${key}</span>`)
     .join('');
 
-  marker.bindPopup(
+  const marker = createGoogleMarker(fac.lat, fac.lng, facIconEmoji(fac.type), fac.name,
     `<div style="font-family:'Inter',sans-serif;min-width:220px">
       <b style="font-family:'Space Grotesk',sans-serif;font-size:14px;color:#fff">${fac.name}</b><br>
       <span style="font-size:11px;color:#8497ad">${fac.category} · ${fac.isGovt ? 'FREE (Govt)' : 'Private'}</span>
@@ -444,6 +525,7 @@ function renderFacilityMarkers() {
       <div style="margin-top:8px;font-size:11px;color:#10b981;font-family:monospace">${fac.doctorStatus}</div>
      </div>`
   );
+  if (marker) facilityLayer.push(marker);
   });
 }
 renderFacilityMarkers();
@@ -457,24 +539,19 @@ let startNodeId = nid(4, 5);
 let targetFacility = facilities[1]; // Kanchipuram Govt Hospital default
 window.setTargetFacility = (facility) => { targetFacility = facility; };
 
-let startMarker = L.marker([startLatLng.lat, startLatLng.lng], {
-  icon: L.divIcon({ className: 'divicon-marker', html: '🟢', iconSize: [20, 20] })
-}).addTo(map);
-
-let endMarker = L.marker([targetFacility.lat, targetFacility.lng], {
-  icon: L.divIcon({ className: 'divicon-marker', html: '🔴', iconSize: [20, 20] })
-}).addTo(map);
+let startMarker = createGoogleMarker(startLatLng.lat, startLatLng.lng, '🟢', 'Start location');
+let endMarker = createGoogleMarker(targetFacility.lat, targetFacility.lng, '🔴', 'Target facility');
 
 let fastestLine = null, safestLine = null;
 
 function applyRegionView(region) {
   selectedRegion = region;
   if (region === 'vellore') {
-    map.setView([12.9165, 79.1325], 12);
+    setMapView(12.9165, 79.1325, 12);
   } else if (region === 'kancheepuram') {
-    map.setView([12.8333, 79.7000], 11);
+    setMapView(12.8333, 79.7000, 11);
   } else {
-    map.setView([13.0200, 80.1800], 11);
+    setMapView(13.0200, 80.1800, 11);
   }
   refreshFacilitiesFromBackend(region);
 }
@@ -504,24 +581,26 @@ function nearestNode(lat, lng) {
   return best;
 }
 
-map.on('click', (e) => {
+if (map) map.addListener('click', (e) => {
+  const clickLat = e.latLng.lat();
+  const clickLng = e.latLng.lng();
   if (pickMode === 'start') {
-    startLatLng = { lat: e.latlng.lat, lng: e.latlng.lng };
-    const n = nearestNode(e.latlng.lat, e.latlng.lng);
+    startLatLng = { lat: clickLat, lng: clickLng };
+    const n = nearestNode(clickLat, clickLng);
     startNodeId = n.id;
-    if (startMarker) map.removeLayer(startMarker);
-    startMarker = L.marker([startLatLng.lat, startLatLng.lng], { icon: L.divIcon({ className: 'divicon-marker', html: '🟢', iconSize: [20, 20] }) }).addTo(map);
+    removeMapObject(startMarker);
+    startMarker = createGoogleMarker(startLatLng.lat, startLatLng.lng, '🟢', 'Start location');
     log('Start location set on map: [' + startLatLng.lat.toFixed(4) + ', ' + startLatLng.lng.toFixed(4) + ']');
     document.getElementById('pick-hint').textContent = 'Start set. Select target facility or click compute routes.';
   } else {
     let closestFac = facilities[0], minD = Infinity;
     facilities.forEach(fac => {
-      const d = distMeters(e.latlng.lat, e.latlng.lng, fac.lat, fac.lng);
+      const d = distMeters(clickLat, clickLng, fac.lat, fac.lng);
       if (d < minD) { minD = d; closestFac = fac; }
     });
     targetFacility = closestFac;
-    if (endMarker) map.removeLayer(endMarker);
-    endMarker = L.marker([targetFacility.lat, targetFacility.lng], { icon: L.divIcon({ className: 'divicon-marker', html: '🔴', iconSize: [20, 20] }) }).addTo(map);
+    removeMapObject(endMarker);
+    endMarker = createGoogleMarker(targetFacility.lat, targetFacility.lng, '🔴', 'Target facility');
     log('Target facility set to ' + targetFacility.name);
     document.getElementById('pick-hint').textContent = 'Facility set: ' + targetFacility.name + '.';
   }
@@ -531,12 +610,12 @@ document.getElementById('btn-reset').onclick = () => {
   startLatLng = { lat: 13.0000, lng: 80.0000 };
   startNodeId = nid(4, 5);
   targetFacility = facilities[1];
-  if (startMarker) map.removeLayer(startMarker);
-  startMarker = L.marker([startLatLng.lat, startLatLng.lng], { icon: L.divIcon({ className: 'divicon-marker', html: '🟢', iconSize: [20, 20] }) }).addTo(map);
-  if (endMarker) map.removeLayer(endMarker);
-  endMarker = L.marker([targetFacility.lat, targetFacility.lng], { icon: L.divIcon({ className: 'divicon-marker', html: '🔴', iconSize: [20, 20] }) }).addTo(map);
-  if (fastestLine) map.removeLayer(fastestLine);
-  if (safestLine) map.removeLayer(safestLine);
+  removeMapObject(startMarker);
+  startMarker = createGoogleMarker(startLatLng.lat, startLatLng.lng, '🟢', 'Start location');
+  removeMapObject(endMarker);
+  endMarker = createGoogleMarker(targetFacility.lat, targetFacility.lng, '🔴', 'Target facility');
+  removeMapObject(fastestLine);
+  removeMapObject(safestLine);
   document.getElementById('results-section').style.display = 'none';
   document.getElementById('pick-hint').textContent = 'Click map to place start location, or select a facility.';
   log('Map selections reset.');
@@ -715,14 +794,17 @@ async function computeRoutes() {
 
   const { fastestRoute, safestRoute, isLiveAPI } = routeResult;
 
-  if (fastestLine) map.removeLayer(fastestLine);
-  if (safestLine) map.removeLayer(safestLine);
+  removeMapObject(fastestLine);
+  removeMapObject(safestLine);
 
-  fastestLine = L.polyline(fastestRoute.latLngs, { color: '#0ea5e9', weight: 4, opacity: 0.85, dashArray: '3 7' }).addTo(map);
-  safestLine = L.polyline(safestRoute.latLngs, { color: '#10b981', weight: 5, opacity: 0.95 }).addTo(map);
+  fastestLine = map ? new google.maps.Polyline({ map, path: fastestRoute.latLngs.map(([lat, lng]) => ({ lat, lng })), strokeColor: '#0ea5e9', strokeWeight: 4, strokeOpacity: 0.85, icons: [{ icon: { path: 'M 0,-1 0,1' }, offset: '0', repeat: '12px' }] }) : null;
+  safestLine = map ? new google.maps.Polyline({ map, path: safestRoute.latLngs.map(([lat, lng]) => ({ lat, lng })), strokeColor: '#10b981', strokeWeight: 5, strokeOpacity: 0.95 }) : null;
 
-  const bounds = L.latLngBounds([...fastestRoute.latLngs, ...safestRoute.latLngs]);
-  map.fitBounds(bounds, { padding: [40, 40] });
+  if (map) {
+    const bounds = new google.maps.LatLngBounds();
+    [...fastestRoute.latLngs, ...safestRoute.latLngs].forEach(([lat, lng]) => bounds.extend({ lat, lng }));
+    map.fitBounds(bounds, { top: 40, right: 40, bottom: 40, left: 40 });
+  }
 
   log(`Routes rendered [${isLiveAPI ? 'LIVE OSRM API' : 'OFFLINE CACHED DB'}]: Recommended Safe (${safestRoute.distKm.toFixed(2)} km, ${Math.round(safestRoute.timeMin)}m) vs Direct (${fastestRoute.distKm.toFixed(2)} km, ${Math.round(fastestRoute.timeMin)}m).`, 't-cyan');
 
@@ -735,6 +817,7 @@ async function computeRoutes() {
   };
 
   renderRouteCards(fastestRoute, safestRoute, isLiveAPI);
+  renderRouteDecisionCard(fastestRoute, safestRoute);
 }
 
 document.getElementById('btn-compute').onclick = computeRoutes;
@@ -772,6 +855,24 @@ function renderRouteCards(fStats, sStats, isLiveAPI) {
   wrap.innerHTML = card('Recommended Healthcare Route', 'safest', sStats) + card('Direct / Fastest Route', 'fastest', fStats);
 }
 
+function renderRouteDecisionCard(fastest, safest) {
+  const card = document.getElementById('route-decision-card');
+  if (!card) return;
+  const zoneDetails = stats => stats.zoneIds.length
+    ? stats.zoneIds.map(id => {
+        const zone = zones.find(z => z.id === id);
+        return `${zone.name} (${zone.evidence.length} sources)`;
+      }).join(', ')
+    : 'No mapped risk zones';
+  const extraMinutes = Math.max(0, Math.round(safest.timeMin - fastest.timeMin));
+  card.innerHTML = `<div class="decision-title">Route decision support</div>
+    <div class="decision-grid">
+      <div class="decision-option safe"><b>SAFE ROUTE: +${extraMinutes} min</b><div class="decision-detail">Avoids ${safest.zoneIds.length} risk zone(s): ${zoneDetails(safest)}</div></div>
+      <div class="decision-option fast"><b>FASTEST ROUTE: ${Math.round(fastest.timeMin)} min</b><div class="decision-detail">Passes through ${fastest.zoneIds.length} risk zone(s): ${zoneDetails(fastest)}</div></div>
+    </div>`;
+  card.style.display = 'block';
+}
+
 // ---------- 12. PHASE 2: Nominatim Geocoding & Browser GPS Services ----------
 async function searchNominatim() {
   const query = document.getElementById('geocode-input').value.trim();
@@ -787,7 +888,7 @@ async function searchNominatim() {
       if (!cached) throw new Error('No cached place matched');
       startLatLng = { lat: cached.lat, lng: cached.lng };
       document.getElementById('pick-hint').textContent = `Offline place match: ${cached.name}`;
-      map.setView([cached.lat, cached.lng], 13);
+      setMapView(cached.lat, cached.lng, 13);
       computeRoutes();
       return;
     }
@@ -804,12 +905,10 @@ async function searchNominatim() {
     const place = results[0];
     startLatLng = { lat: parseFloat(place.lat), lng: parseFloat(place.lon) };
 
-    if (startMarker) map.removeLayer(startMarker);
-    startMarker = L.marker([startLatLng.lat, startLatLng.lng], {
-      icon: L.divIcon({ className: 'divicon-marker', html: '🟢', iconSize: [20, 20] })
-    }).addTo(map);
+    removeMapObject(startMarker);
+    startMarker = createGoogleMarker(startLatLng.lat, startLatLng.lng, '🟢', 'Start location');
 
-    map.setView([startLatLng.lat, startLatLng.lng], 13);
+    setMapView(startLatLng.lat, startLatLng.lng, 13);
     log(`Nominatim resolved: "${place.display_name.substring(0, 45)}..." [${startLatLng.lat.toFixed(4)}, ${startLatLng.lng.toFixed(4)}]`, 't-cyan');
     document.getElementById('pick-hint').textContent = `Origin set to: ${place.display_name.substring(0, 35)}...`;
 
@@ -830,12 +929,10 @@ function useBrowserGPS() {
   navigator.geolocation.getCurrentPosition(
     (pos) => {
       startLatLng = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-      if (startMarker) map.removeLayer(startMarker);
-      startMarker = L.marker([startLatLng.lat, startLatLng.lng], {
-        icon: L.divIcon({ className: 'divicon-marker', html: '🟢', iconSize: [20, 20] })
-      }).addTo(map);
+      removeMapObject(startMarker);
+      startMarker = createGoogleMarker(startLatLng.lat, startLatLng.lng, '🟢', 'Start location');
 
-      map.setView([startLatLng.lat, startLatLng.lng], 14);
+      setMapView(startLatLng.lat, startLatLng.lng, 14);
       log(`GPS position acquired: Lat ${startLatLng.lat.toFixed(4)}, Lng ${startLatLng.lng.toFixed(4)}`, 't-cyan');
       document.getElementById('pick-hint').textContent = `Origin set to device GPS [${startLatLng.lat.toFixed(4)}, ${startLatLng.lng.toFixed(4)}]`;
 
@@ -862,11 +959,9 @@ document.getElementById('btn-manual-location').onclick = () => {
     return;
   }
   startLatLng = { lat, lng };
-  if (startMarker) map.removeLayer(startMarker);
-  startMarker = L.marker([lat, lng], {
-    icon: L.divIcon({ className: 'divicon-marker', html: '🟢', iconSize: [20, 20] })
-  }).addTo(map);
-  map.setView([lat, lng], 14);
+  removeMapObject(startMarker);
+  startMarker = createGoogleMarker(lat, lng, '🟢', 'Start location');
+  setMapView(lat, lng, 14);
   document.getElementById('pick-hint').textContent = `Origin set manually [${lat.toFixed(4)}, ${lng.toFixed(4)}]`;
   log(`Manual location set: [${lat.toFixed(4)}, ${lng.toFixed(4)}]`, 't-cyan');
   computeRoutes();
@@ -920,10 +1015,8 @@ function executeTriage() {
     return `<span class="svc-chip ${val ? 'ok' : 'no'}">${val ? '✅' : '❌'} ${key}</span>`;
   }).join('');
 
-  if (endMarker) map.removeLayer(endMarker);
-  endMarker = L.marker([targetFacility.lat, targetFacility.lng], {
-    icon: L.divIcon({ className: 'divicon-marker', html: '🔴', iconSize: [22, 22] })
-  }).addTo(map);
+  removeMapObject(endMarker);
+  endMarker = createGoogleMarker(targetFacility.lat, targetFacility.lng, '🔴', 'Target facility');
 
   computeRoutes();
 }
@@ -1014,6 +1107,7 @@ document.getElementById('btn-mode-toggle').onclick = () => {
     log('Switched to ONLINE LIVE MODE. OpenStreetMap OSRM & Nominatim APIs active.', 't-cyan');
   }
 
+  updateMapAvailability();
   computeRoutes();
 };
 
@@ -1027,6 +1121,7 @@ document.getElementById('demo-mode-toggle').onchange = (event) => {
   document.getElementById('status-pill').className = 'status-pill ' + (window.demoMode || isOfflineMode ? 'offline' : 'online');
   if (window.demoMode) document.getElementById('offline-banner').style.display = 'flex';
   else if (!isOfflineMode) document.getElementById('offline-banner').style.display = 'none';
+  updateMapAvailability();
   computeRoutes();
 };
 
@@ -1065,7 +1160,7 @@ function addAiMsg(who, text) {
   aiLogEl.scrollTop = aiLogEl.scrollHeight;
 }
 
-function buildContext() {
+function buildContext(decisionSupport = null) {
   const routes = window.__lastRoutes || null;
   return JSON.stringify({
     connectivityMode: isOfflineMode ? 'OFFLINE_RURAL' : 'ONLINE_LIVE',
@@ -1074,8 +1169,82 @@ function buildContext() {
       isLiveAPI: routes.isLiveAPI,
       fastest: { distanceKm: +routes.fastest.distKm.toFixed(2), riskIndex: +routes.fastest.avgRisk.toFixed(1), zones: routes.fastest.zones.map(z => z && z.name) },
       safest: { distanceKm: +routes.safest.distKm.toFixed(2), riskIndex: +routes.safest.avgRisk.toFixed(1), zones: routes.safest.zones.map(z => z && z.name) }
-    } : null
+    } : null,
+    decisionSupport
   }, null, 2);
+}
+
+function rankedZoneData() {
+  return [...zones].sort((a, b) => b.severity - a.severity).map(zone => ({
+    id: zone.id,
+    name: zone.name,
+    severity: zone.severity,
+    sourceTypeBreakdown: zone.evidence.reduce((counts, item) => {
+      counts[item.sourceType] = (counts[item.sourceType] || 0) + 1;
+      return counts;
+    }, {}),
+    sourceCount: zone.evidence.length
+  }));
+}
+
+const prioritySummaryCacheKey = 'routiq-priority-summaries-v1';
+let prioritySummaryPromise = null;
+
+function renderPriorityAreas(summaries = {}) {
+  const list = document.getElementById('priority-areas-list');
+  if (!list) return;
+  list.innerHTML = rankedZoneData().map(zone => {
+    const breakdown = Object.entries(zone.sourceTypeBreakdown).map(([type, count]) => {
+      const meta = evidenceTypeMeta[type] || { label: type, icon: '&#x2022;' };
+      return `<span class="priority-source">${meta.icon} ${meta.label} (${count})</span>`;
+    }).join('');
+    const why = summaries[zone.id] || 'High-severity mapped hazard with multiple evidence records; review before routing.';
+    return `<div class="priority-area">
+      <div class="priority-area-head"><b>${zone.name}</b><span style="color:${riskColor(zone.severity)}">${zone.severity}/10</span></div>
+      <div class="priority-sources">${breakdown}</div>
+      <div class="priority-why">${why}</div>
+    </div>`;
+  }).join('');
+}
+
+async function loadPriorityAreaSummaries() {
+  const status = document.getElementById('priority-panel-status');
+  renderPriorityAreas();
+  let cached = null;
+  try { cached = JSON.parse(sessionStorage.getItem(prioritySummaryCacheKey) || 'null'); } catch (_) { cached = null; }
+  if (cached && typeof cached === 'object') {
+    renderPriorityAreas(cached);
+    if (status) status.textContent = 'AI rationale cached for this session.';
+    return cached;
+  }
+  if (isOfflineMode || window.demoMode) {
+    if (status) status.textContent = 'Local evidence ranking active (offline/demo mode).';
+    return {};
+  }
+  if (prioritySummaryPromise) return prioritySummaryPromise;
+  prioritySummaryPromise = (async () => {
+    try {
+      const question = 'For every risk zone in the supplied context, return a compact JSON object mapping its id to a one-sentence, evidence-based explanation of why it needs attention. Do not invent facts, dates, or services.';
+      const context = buildContext({ priorityAreas: rankedZoneData() });
+      const response = await fetch('/analyst', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        signal: AbortSignal.timeout(15000),
+        body: JSON.stringify({ question, context })
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Analyst HTTP ' + response.status);
+      const match = String(data.answer || '').match(/\{[\s\S]*\}/);
+      const summaries = match ? JSON.parse(match[0]) : {};
+      sessionStorage.setItem(prioritySummaryCacheKey, JSON.stringify(summaries));
+      renderPriorityAreas(summaries);
+      if (status) status.textContent = 'AI rationale generated from the ranked evidence set.';
+      return summaries;
+    } catch (_) {
+      if (status) status.textContent = 'AI unavailable; local evidence ranking shown.';
+      return {};
+    }
+  })();
+  return prioritySummaryPromise;
 }
 
 function generateSmartFallback(question) {
@@ -1100,7 +1269,7 @@ function generateSmartFallback(question) {
   return `ROUTIQ HEALTH Decision Analysis:\nBased on OpenStreetMap OSRM road geometry and hazard risk data, ${targetFacility.name} is the optimal healthcare destination.`;
 }
 
-async function sendAIQuestion(question) {
+async function sendAIQuestion(question, contextOverride = null) {
   addAiMsg('You', question);
   const thinkingDiv = document.createElement('div');
   thinkingDiv.className = 'ai-msg ai';
@@ -1108,7 +1277,7 @@ async function sendAIQuestion(question) {
   aiLogEl.appendChild(thinkingDiv);
   aiLogEl.scrollTop = aiLogEl.scrollHeight;
 
-  const context = buildContext();
+  const context = contextOverride || buildContext();
   const systemPrompt = `You are the AI Healthcare Access & Navigation Analyst for ROUTIQ HEALTH. ` +
     `You assist users in understanding facility choices, symptom triage decisions, government health availability, and safe routing choices. ` +
     `CURRENT CONTEXT:\n${context}`;
@@ -1139,11 +1308,44 @@ document.getElementById('ai-send').onclick = () => {
 document.getElementById('ai-input').addEventListener('keydown', (e) => {
   if (e.key === 'Enter') document.getElementById('ai-send').click();
 });
+function buildQuickQuestionContext(action) {
+  const routes = window.__lastRoutes;
+  if (action === 'priority-areas') return buildContext({ priorityAreas: rankedZoneData() });
+  if (action === 'route-decision' || action === 'emergency-route') {
+    return buildContext({
+      selectedRoute: routes ? {
+        route: action === 'emergency-route' ? 'safest' : 'safest',
+        riskScore: routes ? +routes.safest.avgRisk.toFixed(1) : null,
+        zonesCrossed: routes ? routes.safest.zones.map(zone => zone && zone.name) : [],
+        routeAvailable: Boolean(routes)
+      } : { routeAvailable: false }
+    });
+  }
+  return buildContext();
+}
+
 document.querySelectorAll('.quick-qs button').forEach(btn => {
-  btn.onclick = () => sendAIQuestion(btn.dataset.q);
+  btn.onclick = () => {
+    const question = btn.dataset.q || btn.textContent.trim();
+    const context = btn.dataset.action ? buildQuickQuestionContext(btn.dataset.action) : null;
+    const input = document.getElementById('ai-input');
+    input.value = question;
+    if (context) {
+      input.value = '';
+      sendAIQuestion(question, context);
+    } else {
+      document.getElementById('ai-send').click();
+    }
+  };
 });
 
 addAiMsg('AI Health & Route Analyst', 'Phase 2 Real-World Data Mode Active. OpenStreetMap OSRM routing & Nominatim geocoding operational.');
 
 // Initialize Directory
 renderFacilitiesDirectory();
+loadPriorityAreaSummaries();
+
+const phaseScript = document.createElement('script');
+phaseScript.src = 'phase345.js';
+phaseScript.defer = true;
+document.body.appendChild(phaseScript);

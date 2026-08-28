@@ -21,6 +21,10 @@ app.use(cors());
 app.use(express.json({limit: '32kb'}));
 app.use(express.static(__dirname));
 
+app.get('/config', (_req, res) => {
+  res.json({ googleMapsApiKey: process.env.GOOGLE_MAPS_API_KEY || '' });
+});
+
 function filterFacilitiesByRegion(region) {
   if (region === 'vellore') return seededFacilities.filter(item => item.region === 'vellore');
   if (region === 'kancheepuram') return seededFacilities.filter(item => item.region === 'kancheepuram');

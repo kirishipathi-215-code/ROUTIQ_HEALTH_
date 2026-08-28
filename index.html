@@ -9,7 +9,6 @@
 <meta name="description" content="ROUTIQ HEALTH: AI-powered healthcare access and smart geospatial navigation for rural and urban India">
 <title>ROUTIQ HEALTH — AI-Powered Healthcare Access &amp; Smart Navigation</title>
 <link rel="manifest" href="manifest.json">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="styles.css">
@@ -279,6 +278,9 @@
         <div class="section">
           <p class="section-title">AI Decision Analyst &amp; Evidence Log</p>
           <div class="quick-qs">
+            <button data-action="route-decision">Should I take this route?</button>
+            <button data-action="emergency-route">Best route for an emergency vehicle?</button>
+            <button data-action="priority-areas">Which area needs immediate attention?</button>
             <button data-q="Why was the recommended facility chosen over the closest hospital?">Why not nearest hospital?</button>
             <button data-q="Which route is best for emergency ambulance dispatch right now?">Best emergency route?</button>
             <button data-q="Which nearby public/government facility offers free anti-venom or cardiac care?">Free / Govt facilities?</button>
@@ -319,6 +321,13 @@
               <div class="al-item"><span class="al-swatch" style="background:#ef4444"></span>High Hazard Corridors</div>
               <div class="al-item"><span class="al-swatch" style="background:#7c3aed"></span>Underserved &amp; Unserved Areas</div>
             </div>
+          </div>
+        </div>
+        <div class="section">
+          <p class="section-title">Priority Attention Areas</p>
+          <div class="analytics-card" id="priority-areas-panel">
+            <div class="priority-panel-status" id="priority-panel-status">Ranking risk zones by severity and evidence...</div>
+            <div id="priority-areas-list"></div>
           </div>
         </div>
 
@@ -380,9 +389,10 @@
     <!-- Offline Notification Banner -->
     <div class="offline-banner" id="offline-banner" style="display:none;">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 1l22 22"/><path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55"/><path d="M5 12.55a10.94 10.94 0 0 1 5.17-2.39"/><path d="M10.71 5.05A16 16 0 0 1 22.58 9"/><path d="M1.42 9a15.91 15.91 0 0 1 4.7-2.88"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/></svg>
-      <span><b>RURAL OFFLINE MODE ACTIVE</b> — Operating on locally cached healthcare DB &amp; map geometry (Synced 4m ago). Real-time bed counts require internet connection.</span>
+      <span><b>Offline — showing cached facility list only, live map requires connection</b></span>
     </div>
 
+    <div id="route-decision-card" class="route-decision-card" style="display:none;"></div>
     <div id="map"></div>
     <!-- Phase 5: Ambulance tracker overlay -->
     <div id="ambulance-overlay" style="display:none;position:absolute;bottom:14px;right:14px;z-index:500;background:rgba(13,20,30,0.92);border:1px solid var(--coral);border-radius:9px;padding:10px 14px;font-family:var(--mono);font-size:11px;color:var(--coral);backdrop-filter:blur(8px);">
@@ -416,10 +426,33 @@
 
 </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
-<script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-<script src="app.js"></script>
-<script src="phase345.js"></script>
+<script>
+  window.routiqMapsReady = new Promise(resolve => {
+    const loadApp = () => {
+      const appScript = document.createElement('script');
+      appScript.src = 'app.js';
+      appScript.defer = true;
+      document.body.appendChild(appScript);
+      resolve();
+    };
+    fetch('/config', { headers: { Accept: 'application/json' } })
+      .then(response => response.json())
+      .then(config => {
+        if (!config.googleMapsApiKey) throw new Error('Google Maps API key is not configured');
+        window.__routiqGoogleMapsReady = loadApp;
+        const mapsScript = document.createElement('script');
+        mapsScript.src = 'https://maps.googleapis.com/maps/api/js?key=' + encodeURIComponent(config.googleMapsApiKey) + '&libraries=marker,visualization&callback=__routiqGoogleMapsReady';
+        mapsScript.async = true;
+        mapsScript.defer = true;
+        mapsScript.onerror = loadApp;
+        document.head.appendChild(mapsScript);
+      })
+      .catch(() => {
+        window.googleMapsUnavailable = true;
+        loadApp();
+      });
+  });
+</script>
 </body>
 </html>

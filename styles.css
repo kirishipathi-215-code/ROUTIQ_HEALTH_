@@ -732,6 +732,48 @@ input[type="range"] {
 .route-card.fastest .name { color: var(--cyan); }
 .route-card.safest .name { color: var(--emerald); }
 
+.route-decision-card {
+  position: absolute;
+  top: 58px;
+  left: 14px;
+  right: 14px;
+  z-index: 500;
+  background: rgba(13,20,30,0.94);
+  border: 1px solid var(--border-highlight);
+  border-radius: 9px;
+  padding: 10px 12px;
+  color: var(--text);
+  font-size: 11px;
+  backdrop-filter: blur(8px);
+}
+
+.decision-title {
+  color: var(--text-dim);
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+
+.decision-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.decision-option { padding: 7px 8px; border-radius: 6px; background: var(--panel-2); }
+.decision-option.safe { border-left: 3px solid var(--emerald); }
+.decision-option.fast { border-left: 3px solid var(--cyan); }
+.decision-option b { display: block; font-family: var(--display); font-size: 11.5px; margin-bottom: 3px; }
+.decision-option.safe b { color: var(--emerald); }
+.decision-option.fast b { color: var(--cyan); }
+.decision-detail { color: var(--text-dim); line-height: 1.45; }
+
+.evidence-groups { margin-top: 8px; color: #cbd5e1; font-size: 11.5px; }
+.evidence-group { margin-top: 6px; }
+.evidence-group-title { color: var(--amber); font-family: var(--mono); font-size: 10px; }
+.evidence-group-title span { display: inline-block; width: 18px; color: var(--cyan); }
+.evidence-group ul { margin: 3px 0 0 18px; padding: 0; }
+.evidence-group li { margin: 3px 0; }
+.evidence-group li b { color: var(--text); font-size: 10.5px; }
+.evidence-date { color: var(--text-dim); font-family: var(--mono); font-size: 9.5px; }
+
 .rc-stats {
   display: flex;
   gap: 14px;
@@ -937,6 +979,15 @@ input[type="range"] {
   border-color: var(--border-highlight);
 }
 
+.priority-panel-status { color: var(--text-dim); font-size: 10.5px; margin-bottom: 8px; }
+.priority-area { border-top: 1px solid var(--border); padding: 9px 0; }
+.priority-area:first-child { border-top: 0; padding-top: 0; }
+.priority-area-head { display: flex; justify-content: space-between; gap: 10px; font-size: 11.5px; }
+.priority-area-head b { color: var(--text); }
+.priority-sources { display: flex; flex-wrap: wrap; gap: 4px; margin: 5px 0; }
+.priority-source { color: var(--text-dim); font-family: var(--mono); font-size: 9.5px; }
+.priority-why { color: #cbd5e1; font-size: 10.5px; line-height: 1.4; }
+
 .ai-input-row { display: flex; gap: 6px; }
 
 .ai-input-row input {
@@ -1028,7 +1079,7 @@ input[type="range"] {
   background: #070b10;
 }
 
-.leaflet-popup-content-wrapper {
+.gm-style .gm-style-iw-c {
   background: var(--panel);
   color: var(--text);
   border-radius: 8px;
@@ -1036,8 +1087,8 @@ input[type="range"] {
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
 }
 
-.leaflet-popup-tip { background: var(--panel); }
-.leaflet-container a.leaflet-popup-close-button { color: var(--text-dim); }
+.gm-style .gm-style-iw-d { overflow: auto !important; color: var(--text); }
+.gm-style .gm-style-iw-tc::after { background: var(--panel); }
 
 .top-status {
   position: absolute;

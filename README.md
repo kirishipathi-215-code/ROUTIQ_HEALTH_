@@ -88,7 +88,7 @@ To take **ROUTIQ HEALTH** from its current high-fidelity working prototype to a 
 
 ### ✅ Phase 5: Emergency Fleet Dispatch & Health Ministry Analytics (COMPLETED)
 - [x] **108 Ambulance Simulation**: 3 animated ambulance markers dispatched from near user GPS coordinates, moving in real-time toward recommended hospital. Arrival events logged in terminal.
-- [x] **Leaflet.heat Analytics Heatmap**: Regional health access heatmap overlaid on real map — shows facility coverage (green), risk zone hotspots (amber/red), and underserved rural areas (purple) using Leaflet.heat plugin.
+- [x] **Google Maps Analytics Heatmap**: Regional health access heatmap overlaid on the Google map using the Maps visualization library.
 - [x] **AES-256-GCM Data Protection**: All patient triage sessions and facility data stored in IndexedDB using AES-256-GCM encryption. README includes HIPAA disclaimer noting backend requirements.
 
 ---
@@ -98,13 +98,13 @@ To take **ROUTIQ HEALTH** from its current high-fidelity working prototype to a 
 | Layer | Technologies |
 |---|---|
 | **Frontend UI** | HTML5, CSS3 (Vanilla Dark Mode), JavaScript ES6+, Space Grotesk, Inter, JetBrains Mono |
-| **Mapping & Navigation** | Leaflet.js, Leaflet.heat, OSRM (OpenStreetMap Routing Machine), Nominatim Geocoding |
+| **Mapping & Navigation** | Google Maps JavaScript API, Google Maps visualization/marker libraries, OSRM, Nominatim Geocoding |
 | **Routing Algorithm** | Dual Dijkstra (Fastest + Risk-Aware Safest Path), Geospatial Hazard Post-Processing |
 | **PWA** | Service Workers (Cache API), Web App Manifest, IndexedDB, Background Sync |
 | **AI & CDSS** | Anthropic Claude API (CDSS / differential triage), Rule-Based Fallback Triage Matrix |
 | **Voice** | Web Speech API — SpeechRecognition (STT) + SpeechSynthesis (TTS), 7 Indian languages |
 | **Security** | Web Crypto API — AES-256-GCM encryption, PBKDF2 key derivation (100k iterations) |
-| **Emergency Fleet** | setInterval-based ambulance GPS simulation, Leaflet dynamic markers |
+| **Emergency Fleet** | setInterval-based ambulance GPS simulation, Google Maps dynamic markers |
 | **Referral** | qrcode.js (client-side QR generation), window.print() PDF export, SMS deep-link |
 
 > [!NOTE]
@@ -115,12 +115,12 @@ To take **ROUTIQ HEALTH** from its current high-fidelity working prototype to a 
 1. Install Node.js 18+.
 2. Run `npm install`.
 3. Copy `.env.example` to `.env` and set `ANTHROPIC_API_KEY` for live CDSS.
-4. Add `GOOGLE_MAPS_API_KEY` if you want to regenerate the Vellore hospital seed from Google Places.
+4. Set `GOOGLE_MAPS_API_KEY` to a restricted Google Maps Platform key with Maps JavaScript API, Places API, and billing enabled.
 5. Run `npm start` and open `http://localhost:8080`.
 
 With the server running, execute `npm run smoke-test` to verify the facility API contract.
 
-Demo Mode works without an API key and forces the bundled facility data, cached route solver, and rule-based triage path.
+Google Maps Platform requires billing and usage is subject to current Google pricing and quotas. Never commit the key; keep it in `.env` or the deployment secret store. Demo/Offline Mode works without a key and forces the bundled facility data, cached route solver, and rule-based triage path. Google Maps tiles are not cached: while offline, ROUTIQ HEALTH shows the cached facility list/table and a clear live-map-unavailable banner.
 
 ## Deploy
 
@@ -144,7 +144,7 @@ Important limitation: Google Places exposes location, address, phone, and busine
 ```text
 Browser PWA
   |-- IndexedDB + AES-GCM (offline facilities, triage, routes)
-  |-- Leaflet / OSRM / Nominatim (live map services)
+  |-- Google Maps / OSRM / Nominatim (live map services)
   `-- REST API: /facilities, /facilities/:id, /triage
           `-- Node/Express proxy -- Anthropic Claude (server-side API key)
 ```

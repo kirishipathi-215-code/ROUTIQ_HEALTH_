@@ -2,7 +2,7 @@
    ROUTIQ HEALTH — phase345.js
    Phase 3: PWA / IndexedDB / AES-256-GCM / Service Worker / GPS / SMS
    Phase 4: Voice STT/TTS / CDSS (Claude) / Digital Referral Slip + QR
-   Phase 5: Ambulance Simulation / Leaflet Heatmap / Data Protection
+   Phase 5: Ambulance Simulation / Google Maps Heatmap / Data Protection
    ========================================================================= */
 
 /* ───────────────────────────────────────────────────────────────────────────
@@ -142,12 +142,11 @@ function autoDetectGPS() {
       if (typeof startLatLng === 'undefined') return; // app.js guard
       startLatLng.lat = pos.coords.latitude;
       startLatLng.lng = pos.coords.longitude;
-      if (startMarker) map.removeLayer(startMarker);
+      removeMapObject(startMarker);
       // startMarker is defined in app.js scope
-      window.startMarker = L.marker([startLatLng.lat, startLatLng.lng], {
-        icon: L.divIcon({ className: 'divicon-marker', html: '🟢', iconSize: [20, 20] })
-      }).addTo(map);
-      map.setView([startLatLng.lat, startLatLng.lng], 13);
+      startMarker = createGoogleMarker(startLatLng.lat, startLatLng.lng, '🟢', 'Start location');
+      window.startMarker = startMarker;
+      setMapView(startLatLng.lat, startLatLng.lng, 13);
       log('GPS auto-acquired: [' + startLatLng.lat.toFixed(4) + ', ' + startLatLng.lng.toFixed(4) + ']', 't-cyan');
     },
     err => log('GPS denied (' + err.message + '). Click map or use address search to set location.', 't-amber'),
@@ -375,11 +374,9 @@ window.executeTriage = async function () {
     .map(([k, v]) => `<span class="svc-chip ${v ? 'ok' : 'no'}">${v ? '✅' : '❌'} ${k}</span>`).join('');
 
   // Update end marker
-  if (window.endMarker) map.removeLayer(window.endMarker);
-  if (endMarker) map.removeLayer(endMarker);
-  endMarker = L.marker([targetFacility.lat, targetFacility.lng], {
-    icon: L.divIcon({ className: 'divicon-marker', html: '🔴', iconSize: [22, 22] })
-  }).addTo(map);
+  removeMapObject(window.endMarker);
+  removeMapObject(endMarker);
+  endMarker = createGoogleMarker(targetFacility.lat, targetFacility.lng, '🔴', 'Target facility');
 
   log('Top facility match: ' + best.facility.name + ' (' + best.score + '% suitability).', 't-cyan');
 
@@ -490,17 +487,9 @@ let _ambulances = [];
 let _ambInterval = null;
 let _ambTick = 0;
 
-function _makeAmbIcon(id) {
-  return L.divIcon({
-    className: '',
-    html: `<div style="font-size:20px;filter:drop-shadow(0 0 4px #ef4444);" title="Ambulance Unit ${id}">🚑</div>`,
-    iconSize: [24, 24]
-  });
-}
-
 function dispatchAmbulances() {
   // Clear existing
-  _ambulances.forEach(a => a.marker && map.removeLayer(a.marker));
+  _ambulances.forEach(a => removeMapObject(a.marker));
   _ambulances = [];
   if (_ambInterval) { clearInterval(_ambInterval); _ambInterval = null; }
   _ambTick = 0;
@@ -517,9 +506,8 @@ function dispatchAmbulances() {
   offsets.forEach((off, i) => {
     const lat = startLatLng.lat + off.dlat;
     const lng = startLatLng.lng + off.dlng;
-    const marker = L.marker([lat, lng], { icon: _makeAmbIcon(i + 1) })
-      .addTo(map)
-      .bindPopup(`<b>Ambulance Unit ${i + 1}</b><br><span style="color:#10b981;font-size:11px">Dispatched → ${targetFacility.name}</span>`);
+    const marker = createGoogleMarker(lat, lng, `<div style="font-size:20px;filter:drop-shadow(0 0 4px #ef4444);" title="Ambulance Unit ${i + 1}">🚑</div>`, `Ambulance Unit ${i + 1}`,
+      `<b>Ambulance Unit ${i + 1}</b><br><span style="color:#10b981;font-size:11px">Dispatched to ${targetFacility.name}</span>`);
     _ambulances.push({ id: i + 1, lat, lng, marker, arrived: false });
   });
 
@@ -537,14 +525,14 @@ function dispatchAmbulances() {
       const dist  = Math.sqrt(dLat * dLat + dLng * dLng);
       if (dist < 0.003) {
         amb.arrived = true;
-        amb.marker.setLatLng([targetFacility.lat, targetFacility.lng]);
+        if (amb.marker) amb.marker.position = { lat: targetFacility.lat, lng: targetFacility.lng };
         log('Ambulance Unit ' + amb.id + ' arrived at ' + targetFacility.name + '.', 't-cyan');
       } else {
         allDone = false;
         const speed = (0.001 + Math.random() * 0.0006) * (isOfflineMode ? 0.8 : 1);
         amb.lat += (dLat / dist) * speed;
         amb.lng += (dLng / dist) * speed;
-        amb.marker.setLatLng([amb.lat, amb.lng]);
+        if (amb.marker) amb.marker.position = { lat: amb.lat, lng: amb.lng };
       }
     });
 
@@ -564,16 +552,16 @@ function dispatchAmbulances() {
 
 document.getElementById('btn-dispatch-ambulance').onclick = dispatchAmbulances;
 
-// 5-B  Leaflet.heat Heatmap Analytics -----------------------------------------
+// 5-B  Google Maps Heatmap Analytics -----------------------------------------
 let _heatLayer = null;
 
 function showHealthHeatmap() {
-  if (typeof L.heatLayer === 'undefined') {
-    log('Leaflet.heat plugin not loaded. Heatmap unavailable.', 't-amber');
+  if (!map || !google.maps.visualization) {
+    log('Google Maps visualization library unavailable. Heatmap unavailable.', 't-amber');
     document.getElementById('heatmap-status').textContent = 'Plugin unavailable';
     return;
   }
-  if (_heatLayer) map.removeLayer(_heatLayer);
+  if (_heatLayer) _heatLayer.setMap(null);
 
   const pts = [];
 
@@ -603,17 +591,18 @@ function showHealthHeatmap() {
     [13.060, 79.800, 0.78]
   ].forEach(p => pts.push(p));
 
-  _heatLayer = L.heatLayer(pts, {
-    radius: 38, blur: 28, maxZoom: 16,
-    gradient: { 0.0: '#0d2b1a', 0.3: '#10b981', 0.55: '#f59e0b', 0.78: '#ef4444', 1.0: '#7c3aed' }
-  }).addTo(map);
+  _heatLayer = new google.maps.visualization.HeatmapLayer({
+    data: pts.map(([lat, lng, weight]) => ({ location: new google.maps.LatLng(lat, lng), weight })),
+    radius: 38, dissipating: true,
+    gradient: ['rgba(13,43,26,0)', '#10b981', '#f59e0b', '#ef4444', '#7c3aed'], map
+  });
 
   document.getElementById('heatmap-status').textContent = 'Active · ' + pts.length + ' data points';
   log('Health access heatmap rendered: ' + pts.length + ' points (facilities + risk zones + underserved areas).', 't-cyan');
 }
 
 function hideHealthHeatmap() {
-  if (_heatLayer) { map.removeLayer(_heatLayer); _heatLayer = null; }
+  if (_heatLayer) { _heatLayer.setMap(null); _heatLayer = null; }
   document.getElementById('heatmap-status').textContent = 'Off';
   log('Health access heatmap hidden.', 't-dim');
 }

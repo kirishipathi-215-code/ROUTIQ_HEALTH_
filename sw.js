@@ -1,10 +1,9 @@
 /* ============================================================
    ROUTIQ HEALTH — Service Worker (Phase 3 PWA)
-   Caches app shell, map tiles, OSRM and Nominatim API responses
+   Caches app shell, facility data, OSRM and Nominatim API responses
    ============================================================ */
 
 const APP_CACHE   = 'routiq-app-v1';
-const TILE_CACHE  = 'routiq-tiles-v1';
 const API_CACHE   = 'routiq-api-v1';
 
 const APP_SHELL = [
@@ -16,8 +15,6 @@ const APP_SHELL = [
   './manifest.json',
   './facilities.seed.json',
   './facilities.vellore.seed.json',
-  'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css',
-  'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js',
   'https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap'
 ];
 
@@ -34,7 +31,7 @@ self.addEventListener('install', event => {
 
 // ---------- ACTIVATE: purge old caches ----------
 self.addEventListener('activate', event => {
-  const CURRENT = [APP_CACHE, TILE_CACHE, API_CACHE];
+  const CURRENT = [APP_CACHE, API_CACHE];
   event.waitUntil(
     caches.keys()
       .then(keys => Promise.all(
@@ -56,14 +53,6 @@ self.addEventListener('fetch', event => {
   if (req.method !== 'GET') return;
 
   // 1. Map tiles — cache-first (long-lived tiles rarely change)
-  if (
-    url.hostname.includes('carto') ||
-    url.hostname.includes('tile.openstreetmap') ||
-    url.pathname.includes('/tiles/')
-  ) {
-    event.respondWith(cacheFirst(req, TILE_CACHE));
-    return;
-  }
 
   // 2. OSRM routing API — network-first, cache fallback
   if (url.hostname.includes('project-osrm.org') || url.hostname.includes('router.project-osrm')) {

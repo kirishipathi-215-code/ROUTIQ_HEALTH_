@@ -1,5 +1,6 @@
 const fs = require('fs');
 const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
 
 const GOOGLE_MAPS_API_KEY = process.env.GOOGLE_MAPS_API_KEY;
 const OUT_FILE = path.join(__dirname, '..', 'facilities.vellore.seed.json');
@@ -41,7 +42,7 @@ function inferGovt(place) {
 function inferDescription(place, details) {
   const status = details.business_status || place.business_status || 'UNKNOWN';
   const address = details.formatted_address || place.vicinity || 'Address unavailable';
-  return `Google Places entry for ${place.name}. Status: ${status}. Address: ${address}. Service capability unverified - needs manual review.`;
+  return `Google Places entry for ${place.name}. Status: ${status}. Address: ${address}. Clinical services unverified - Google Places has no clinical capability data, needs manual review.`;
 }
 
 async function nearbySearchPage(pageToken) {
