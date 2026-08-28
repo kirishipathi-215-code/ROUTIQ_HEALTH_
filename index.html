@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#10b981">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="description" content="ROUTIQ HEALTH: AI-powered healthcare access and smart geospatial navigation for rural and urban India">
+<title>ROUTIQ HEALTH — AI-Powered Healthcare Access &amp; Smart Navigation</title>
+<link rel="manifest" href="manifest.json">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div id="app">
+
+  <!-- ================= SIDEBAR ================= -->
+  <div id="sidebar">
+    <!-- Brand Header -->
+    <div class="brand">
+      <div class="brand-top">
+        <div class="mark">RH</div>
+        <div>
+          <h1>ROUTIQ HEALTH</h1>
+          <p>AI Healthcare Access &amp; Smart Navigation</p>
+        </div>
+      </div>
+      <div class="connectivity-bar">
+        <div class="status-pill online" id="status-pill">
+          <span class="status-dot"></span>
+          <span id="status-text">ONLINE · Live Data</span>
+        </div>
+        <button class="sync-btn" id="btn-sync" title="Synchronize local healthcare & map database">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/></svg>
+          Sync Data
+        </button>
+        <button class="mode-toggle-btn" id="btn-mode-toggle" title="Toggle Rural Offline Mode">
+          <span id="mode-toggle-label">Rural Offline</span>
+        </button>
+        <label class="demo-toggle" title="Use bundled cached data and rule-based triage"><input type="checkbox" id="demo-mode-toggle"> Demo Mode</label>
+      </div>
+    </div>
+
+    <!-- Navigation Tabs -->
+    <div class="sidebar-tabs">
+      <button class="tab-btn active" data-tab="tab-triage">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+        Triage &amp; Needs
+      </button>
+      <button class="tab-btn" data-tab="tab-routing">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
+        Smart Route
+      </button>
+      <button class="tab-btn" data-tab="tab-facilities">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18M3 7v14M21 7v14M6 10h4M6 14h4M14 10h4M14 14h4M9 3h6v4H9z"/></svg>
+        Facilities
+      </button>
+      <button class="tab-btn" data-tab="tab-ai">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a10 10 0 1 0 10 10H12V2z"/><path d="M12 12L2.5 7.5"/><path d="M12 12v10"/></svg>
+        AI Analyst
+      </button>
+      <button class="tab-btn" data-tab="tab-analytics">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+        Analytics
+      </button>
+    </div>
+
+    <!-- Sidebar Scroll Content -->
+    <div class="sidebar-scroll">
+
+      <!-- ============ TAB 1: SYMPTOM TRIAGE & REQUIREMENT ASSESSOR ============ -->
+      <div class="tab-pane active" id="tab-triage">
+
+        <div class="section">
+          <p class="section-title">01 · Describe Medical Need or Symptoms</p>
+          <!-- Phase 4: Voice Language Selector -->
+          <div class="voice-controls-row">
+            <select id="voice-language" title="Select triage input/output language">
+              <option value="en-IN">🇮🇳 English (India)</option>
+              <option value="ta-IN">🗣️ தமிழ் Tamil</option>
+              <option value="hi-IN">🗣️ हिंदी Hindi</option>
+              <option value="te-IN">🗣️ తెలుగు Telugu</option>
+              <option value="mr-IN">🗣️ मराठी Marathi</option>
+              <option value="bn-IN">🗣️ বাংলা Bengali</option>
+              <option value="kn-IN">🗣️ ಕನ್ನಡ Kannada</option>
+            </select>
+            <button id="btn-voice-input" title="Speak symptoms aloud">🎙️ Speak</button>
+            <button id="btn-speak-result" title="Read triage result aloud">🔊 Read</button>
+          </div>
+          <div class="symptom-input-wrap">
+            <textarea id="symptom-input" rows="3" placeholder="e.g. 'I am in a rural village, feeling severe chest pain radiating to left arm and sweating...' (or click 🎙️ to speak)"></textarea>
+            <button class="assess-btn" id="btn-assess-symptoms">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+              AI + CDSS Assess &amp; Rank Facilities
+            </button>
+          </div>
+          <div id="triage-status" class="form-status" role="status"></div>
+
+          <div class="preset-label">Or select a common emergency scenario:</div>
+          <div class="preset-grid">
+            <button class="preset-chip" data-symptom="Severe chest pain radiating to arm, heavy breathing, sweating">🫀 Chest Pain / Cardiac</button>
+            <button class="preset-chip" data-symptom="Snake bite near agricultural field, swelling in leg, blurred vision">🐍 Snake Bite / Anti-Venom</button>
+            <button class="preset-chip" data-symptom="High-risk pregnancy labor pain, severe bleeding in village">🤰 Maternity / Obstetrics</button>
+            <button class="preset-chip" data-symptom="High fever in 3yo child with seizures and unconsciousness">👶 Pediatric Seizure</button>
+            <button class="preset-chip" data-symptom="Highway motorcycle crash, compound leg fracture, heavy bleeding">💥 Trauma / Bike Accident</button>
+          </div>
+        </div>
+
+        <!-- AI Triage Assessment Output Card -->
+        <div class="section" id="triage-result-card" style="display:none;">
+          <p class="section-title">02 · AI Medical Triage Profile</p>
+          <div class="triage-card">
+            <div class="triage-header">
+              <span class="urgency-badge" id="triage-urgency">CRITICAL</span>
+              <span class="triage-spec" id="triage-specialty">Cardiology &amp; Emergency ICU</span>
+            </div>
+            <div class="triage-details">
+              <div class="tr-item">
+                <span class="label">Assessed Urgency</span>
+                <span class="val" id="triage-urgency-desc">Immediate Emergency Care</span>
+              </div>
+              <div class="tr-item">
+                <span class="label">Primary Specialist Required</span>
+                <span class="val" id="triage-required-spec">Interventional Cardiologist</span>
+              </div>
+              <div class="tr-item">
+                <span class="label">Mandatory Facilities</span>
+                <div class="tags-row" id="triage-mandatory-tags">
+                  <span class="tag">Cath Lab</span>
+                  <span class="tag">ICU Bed</span>
+                  <span class="tag">Oxygen</span>
+                </div>
+              </div>
+            </div>
+            <div class="triage-note" id="triage-explanation">
+              Nearest PHC (3 km away) lacks Cardiology &amp; ICU facilities. Redirecting to recommended Government District Hospital (11 km) with full emergency setup.
+            </div>
+          </div>
+        </div>
+
+        <!-- Top Recommended Facility Box -->
+        <div class="section" id="recommended-facility-section" style="display:none;">
+          <p class="section-title">03 · Recommended Healthcare Destination</p>
+          <div class="rec-facility-card">
+            <div class="rf-top">
+              <div>
+                <div class="rf-name" id="rf-name">Government District Hospital</div>
+                <div class="rf-sub" id="rf-type">Public Tertiary Hospital · 24/7 Emergency</div>
+              </div>
+              <div class="match-badge" id="rf-match">98% MATCH</div>
+            </div>
+            <div class="rf-grid">
+              <div>Distance: <b id="rf-dist">11.4 km</b></div>
+              <div>Travel Time: <b id="rf-time">~18 min</b></div>
+              <div>Govt / Free: <b id="rf-cost" style="color:var(--emerald);">Yes (Free)</b></div>
+              <div>Specialist: <b id="rf-spec-status" style="color:var(--emerald);">On Duty ✅</b></div>
+            </div>
+            <div class="rf-services-list" id="rf-services">
+              <span class="svc-chip ok">✅ Cath Lab</span>
+              <span class="svc-chip ok">✅ ICU Bed</span>
+              <span class="svc-chip ok">✅ Oxygen Supply</span>
+              <span class="svc-chip ok">✅ 24/7 Ambulance</span>
+            </div>
+            <button class="navigate-btn" id="btn-navigate-to-rec">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
+              Navigate to Recommended Facility
+            </button>
+            <div style="display:flex;gap:6px;margin-top:8px;">
+              <button id="btn-gen-referral" style="flex:1;background:var(--panel-3);border:1px solid var(--border-highlight);color:var(--cyan);font-size:11.5px;font-weight:700;padding:8px;border-radius:7px;cursor:pointer;">📋 Generate Referral Slip + QR</button>
+              <button id="btn-sms-fallback" style="flex:1;background:var(--panel-3);border:1px solid var(--amber);color:var(--amber);font-size:11.5px;font-weight:700;padding:8px;border-radius:7px;cursor:pointer;">📱 SMS Emergency Referral</button>
+            </div>
+
+      </div>
+          </div>
+          </div>
+          </div>
+
+      <!-- ============ TAB 2: SMART ROUTE & DECISION PROFILE ============ -->
+      <div class="tab-pane" id="tab-routing">
+
+        <div class="section">
+          <p class="section-title">01 · Origin &amp; Destination Points</p>
+          <div class="geocode-row" style="display:flex;gap:6px;margin-bottom:8px;">
+            <input type="text" id="geocode-input" placeholder="Search address or village (Nominatim)..." style="flex:1;background:var(--panel-2);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:8px 10px;font-size:11.5px;outline:none;">
+            <button id="btn-geocode" style="background:var(--cyan);border:none;color:#02141f;font-weight:700;padding:0 10px;border-radius:6px;font-size:11px;cursor:pointer;">Search</button>
+            <button id="btn-gps" title="Use current location via GPS" style="background:var(--panel-2);border:1px solid var(--border);color:var(--emerald);padding:0 8px;border-radius:6px;font-size:11px;cursor:pointer;font-weight:600;">📍 GPS</button>
+          </div>
+          <div id="manual-location" style="display:none;gap:6px;margin-bottom:8px;">
+            <input type="number" id="manual-lat" step="any" placeholder="Latitude" aria-label="Manual latitude" style="flex:1;background:var(--panel-2);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:8px 10px;font-size:11.5px;outline:none;">
+            <input type="number" id="manual-lng" step="any" placeholder="Longitude" aria-label="Manual longitude" style="flex:1;background:var(--panel-2);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:8px 10px;font-size:11px;outline:none;">
+            <button id="btn-manual-location" style="background:var(--panel-2);border:1px solid var(--emerald);color:var(--emerald);font-weight:700;padding:0 10px;border-radius:6px;font-size:11px;cursor:pointer;">Set</button>
+          </div>
+          <div class="step-row">
+            <button class="pick-btn active" id="btn-pick-start" data-mode="start"><span class="dot start"></span> Set Start Location</button>
+            <button class="pick-btn" id="btn-pick-end" data-mode="end"><span class="dot end"></span> Select Facility</button>
+          </div>
+          <div class="empty-hint" id="pick-hint">Click anywhere on the map to set your current location, or choose a target facility from the map markers.</div>
+          <div id="route-error" class="form-status" role="status"></div>
+        </div>
+
+        <div class="section">
+          <p class="section-title">02 · Decision Profile &amp; Filters</p>
+
+          <div class="field-group">
+            <label class="field-label">Vehicle &amp; Transport Mode</label>
+            <div class="mode-toggle">
+              <button class="active" data-mode="civilian" id="mode-civilian">🚗 Private Vehicle / Auto</button>
+              <button data-mode="emergency" id="mode-emergency">🚑 Emergency Ambulance</button>
+            </div>
+          </div>
+
+          <div class="field-group">
+            <label class="field-label">Facility Filter Preferences</label>
+            <div class="checkbox-row">
+              <label><input type="checkbox" id="filter-govt" checked> Public / Free Government Hospital</label>
+              <label><input type="checkbox" id="filter-icu" checked> 24/7 ICU &amp; Emergency Ready</label>
+              <label><input type="checkbox" id="filter-oxygen" checked> Guaranteed Oxygen &amp; Blood Bank</label>
+            </div>
+          </div>
+
+          <div class="slider-row">
+            <label>Road Risk Aversion <span>Weight <b id="risk-weight-val">6</b>/10</span></label>
+            <input type="range" min="0" max="10" value="6" id="risk-weight">
+            <div class="slider-hint">Higher aversion penalizes flood belts, bad roads, and high accident junctions.</div>
+          </div>
+
+          <button class="compute-btn" id="btn-compute">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2v20M2 12h20"/><circle cx="12" cy="12" r="7"/></svg>
+            Compute Smart Routes &amp; Safety Risk Index
+          </button>
+          <button class="reset-link" id="btn-reset">Reset Map Selections</button>
+        </div>
+
+        <!-- Route Comparison Results -->
+        <div class="section" id="results-section" style="display:none;">
+          <p class="section-title">03 · Route Intelligence &amp; Hazards</p>
+          <div id="route-cards"></div>
+        </div>
+
+      </div>
+
+      <!-- ============ TAB 3: FACILITY DIRECTORY & OFFLINE DB ============ -->
+      <div class="tab-pane" id="tab-facilities">
+        <div class="section">
+          <p class="section-title">Healthcare Facilities in Catchment Area</p>
+          <div class="offline-sync-info-box">
+            <div class="osi-title">
+              <span>💾 Local SQLite/IndexedDB Cache</span>
+              <span class="sync-time-tag" id="facility-db-sync-time">Synced 4 mins ago</span>
+            </div>
+            <div class="osi-desc">
+              Regional facility records, doctor rosters, ICU bed capacities, and specialty maps are cached locally for offline rural navigation.
+            </div>
+          </div>
+          
+          <div class="facility-search-row">
+            <input type="text" id="facility-search-input" placeholder="Search hospital name, specialty, or service...">
+          </div>
+
+          <div class="facility-directory-list" id="facility-directory-list">
+            <!-- Dynamic facility cards populated via JS -->
+          </div>
+        </div>
+      </div>
+
+      <!-- ============ TAB 4: AI HEALTH & ROUTE ANALYST ============ -->
+      <div class="tab-pane" id="tab-ai">
+        <div class="section">
+          <p class="section-title">AI Decision Analyst &amp; Evidence Log</p>
+          <div class="quick-qs">
+            <button data-q="Why was the recommended facility chosen over the closest hospital?">Why not nearest hospital?</button>
+            <button data-q="Which route is best for emergency ambulance dispatch right now?">Best emergency route?</button>
+            <button data-q="Which nearby public/government facility offers free anti-venom or cardiac care?">Free / Govt facilities?</button>
+            <button data-q="What road hazards or flood zones affect navigation right now?">Road hazards breakdown?</button>
+          </div>
+          <div class="ai-log" id="ai-log"></div>
+          <div class="ai-input-row">
+            <input type="text" id="ai-input" placeholder="Ask about facilities, symptoms, or route hazards...">
+            <button id="ai-send">Ask</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============ TAB 5: ANALYTICS DASHBOARD (Phase 5) ============ -->
+      <div class="tab-pane" id="tab-analytics">
+        <div class="section">
+          <p class="section-title">Impact Summary</p>
+          <div class="analytics-card impact-grid">
+            <div><span>Facilities mapped</span><b id="impact-facilities">0</b></div>
+            <div><span>Avg suitability score</span><b id="impact-score">--</b></div>
+            <div><span>Est. time saved</span><b id="impact-time-saved">--</b></div>
+          </div>
+        </div>
+        <div class="section">
+          <p class="section-title">Health Access Heatmap</p>
+          <div class="analytics-card">
+            <div class="analytics-row">
+              <span>Heatmap Layer</span>
+              <span id="heatmap-status" style="font-family:var(--mono);font-size:11px;color:var(--text-dim);">Off</span>
+            </div>
+            <div style="display:flex;gap:6px;margin-top:8px;">
+              <button id="btn-show-heatmap" class="analytics-btn">🌡️ Show Risk &amp; Access Heatmap</button>
+              <button id="btn-hide-heatmap" class="analytics-btn dim">Hide</button>
+            </div>
+            <div class="analytics-legend">
+              <div class="al-item"><span class="al-swatch" style="background:#10b981"></span>Good Access (Facilities)</div>
+              <div class="al-item"><span class="al-swatch" style="background:#f59e0b"></span>Moderate Risk Zones</div>
+              <div class="al-item"><span class="al-swatch" style="background:#ef4444"></span>High Hazard Corridors</div>
+              <div class="al-item"><span class="al-swatch" style="background:#7c3aed"></span>Underserved &amp; Unserved Areas</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="section">
+          <p class="section-title">108 Emergency Ambulance Dispatch (Simulation)</p>
+          <div class="analytics-card">
+            <div class="analytics-row">
+              <span>Fleet Status</span>
+              <span id="ambulance-status" style="font-family:var(--mono);font-size:11px;color:var(--amber);">STANDBY</span>
+            </div>
+            <button id="btn-dispatch-ambulance" class="analytics-btn" style="margin-top:8px;background:rgba(239,68,68,0.2);border-color:var(--coral);color:var(--coral);">🚑 Dispatch 108 Emergency Units (Simulation)</button>
+            <div class="analytics-note">Note: Real 108 ambulance dispatch requires government API. This is a realistic demo simulation using live map coordinates and movement.</div>
+          </div>
+        </div>
+
+        <div class="section">
+          <p class="section-title">Data Protection &amp; Privacy</p>
+          <div class="analytics-card">
+            <div class="analytics-row"><span>Local Storage Encryption</span><span style="color:var(--emerald);font-family:var(--mono);font-size:11px;">AES-256-GCM ✅</span></div>
+            <div class="analytics-row"><span>Patient Data in Transit</span><span style="color:var(--amber);font-family:var(--mono);font-size:11px;">Client-Side Only</span></div>
+            <div class="analytics-row"><span>HIPAA Compliance</span><span style="color:var(--text-dim);font-family:var(--mono);font-size:11px;">Requires Backend</span></div>
+            <div class="analytics-note">⚠️ Full HIPAA-equivalent compliance requires backend infrastructure, server-side key management, and audit logging beyond this client-side prototype.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ================= LEGEND SECTION ================= -->
+      <div class="section legend-section">
+        <p class="section-title">Geospatial Risk &amp; Facility Legend</p>
+        <div class="legend-grid">
+          <div class="legend-item"><span class="legend-swatch" style="background:#3ba6e8"></span> Low-Lying Flood Belt</div>
+          <div class="legend-item"><span class="legend-swatch" style="background:#c25ce0"></span> High Traffic Bottleneck</div>
+          <div class="legend-item"><span class="legend-swatch" style="background:#ef4444"></span> High Accident Junction</div>
+          <div class="legend-item"><span class="legend-swatch" style="background:#a67c3d"></span> Canal Embankment Risk</div>
+          <div class="legend-item"><span class="legend-swatch" style="background:#10b981"></span> Recommended Safe Route</div>
+          <div class="legend-item"><span class="legend-swatch" style="background:#0ea5e9"></span> Fastest Direct Route</div>
+        </div>
+      </div>
+
+      <!-- ================= SCAN LOG TERMINAL ================= -->
+      <div class="section">
+        <p class="section-title">Geospatial &amp; DB Scan Log</p>
+        <div class="terminal" id="terminal"></div>
+      </div>
+
+    </div> <!-- End sidebar-scroll -->
+  </div> <!-- End sidebar -->
+
+  <!-- ================= MAP DISPLAY ================= -->
+  <div id="map-wrap">
+    <!-- Top Floating Status Overlay -->
+    <div class="top-status">
+      <div class="ts-item"><span class="pulse"></span><b>ROUTIQ Geospatial Engine</b></div>
+      <div class="ts-item">Network Nodes: <b id="stat-zones">140</b></div>
+      <div class="ts-item">Facilities Tracked: <b id="stat-fac-count">6</b></div>
+      <div class="ts-item">Connectivity: <b id="stat-conn" style="color:var(--emerald);">ONLINE (Live)</b></div>
+    </div>
+
+    <!-- Offline Notification Banner -->
+    <div class="offline-banner" id="offline-banner" style="display:none;">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 1l22 22"/><path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55"/><path d="M5 12.55a10.94 10.94 0 0 1 5.17-2.39"/><path d="M10.71 5.05A16 16 0 0 1 22.58 9"/><path d="M1.42 9a15.91 15.91 0 0 1 4.7-2.88"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/></svg>
+      <span><b>RURAL OFFLINE MODE ACTIVE</b> — Operating on locally cached healthcare DB &amp; map geometry (Synced 4m ago). Real-time bed counts require internet connection.</span>
+    </div>
+
+    <div id="map"></div>
+    <!-- Phase 5: Ambulance tracker overlay -->
+    <div id="ambulance-overlay" style="display:none;position:absolute;bottom:14px;right:14px;z-index:500;background:rgba(13,20,30,0.92);border:1px solid var(--coral);border-radius:9px;padding:10px 14px;font-family:var(--mono);font-size:11px;color:var(--coral);backdrop-filter:blur(8px);">
+      🚑 <b>108 UNITS ACTIVE</b> — <span id="ambulance-eta">En route...</span>
+    </div>
+  </div>
+
+  <!-- ============ REFERRAL SLIP MODAL (Phase 4) ============ -->
+  <div id="referral-modal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(7,11,16,0.92);align-items:center;justify-content:center;backdrop-filter:blur(6px);">
+    <div class="referral-modal-inner">
+      <div class="referral-header">
+        <div>
+          <div style="font-family:var(--display);font-size:17px;font-weight:700;color:#fff;">📋 Digital Referral Slip</div>
+          <div style="font-size:11px;color:var(--text-dim);margin-top:2px;">ROUTIQ HEALTH · Powered by AI Triage &amp; CDSS</div>
+        </div>
+        <button id="btn-close-referral" style="background:none;border:1px solid var(--border);color:var(--text-dim);padding:5px 10px;border-radius:6px;font-size:12px;cursor:pointer;">✕ Close</button>
+      </div>
+      <div style="display:flex;gap:16px;align-items:flex-start;">
+        <div id="referral-slip-content" class="referral-slip-content"></div>
+        <div style="text-align:center;">
+          <div id="referral-qr" style="background:var(--panel-2);padding:8px;border-radius:8px;border:1px solid var(--border);"></div>
+          <div style="font-size:10px;color:var(--text-muted);margin-top:6px;">Scan at hospital reception</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:14px;">
+        <button id="btn-print-referral" style="flex:1;background:var(--cyan);border:none;color:#02141f;font-weight:700;padding:10px;border-radius:7px;font-size:12.5px;cursor:pointer;">🖨️ Print / Save PDF</button>
+        <button id="btn-sms-from-modal" style="flex:1;background:var(--panel-2);border:1px solid var(--amber);color:var(--amber);font-weight:700;padding:10px;border-radius:7px;font-size:12.5px;cursor:pointer;">📱 Send via SMS</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="app.js"></script>
+<script src="phase345.js"></script>
+</body>
+</html>
