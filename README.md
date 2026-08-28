@@ -117,6 +117,8 @@ To take **ROUTIQ HEALTH** from its current high-fidelity working prototype to a 
 3. Copy `.env.example` to `.env` and set `ANTHROPIC_API_KEY` for live CDSS.
 4. Run `npm start` and open `http://localhost:8080`.
 
+With the server running, execute `npm run smoke-test` to verify the facility API contract.
+
 Demo Mode works without an API key and forces the bundled facility data, cached route solver, and rule-based triage path.
 
 ## Deploy
@@ -134,6 +136,17 @@ Browser PWA
   `-- REST API: /facilities, /facilities/:id, /triage
           `-- Node/Express proxy -- Anthropic Claude (server-side API key)
 ```
+
+### API contract
+
+| Method | Endpoint | Purpose |
+|---|---|---|
+| `GET` | `/facilities` | Return the regional facility dataset |
+| `GET` | `/facilities/:id` | Return one facility record |
+| `POST` | `/triage` | Securely proxy Claude CDSS triage |
+| `POST` | `/analyst` | Securely proxy analyst questions |
+
+The browser never receives `ANTHROPIC_API_KEY`; it only calls the local proxy endpoints.
 
 ## Changelog
 
