@@ -7,10 +7,11 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="description" content="ROUTIQ HEALTH: AI-powered healthcare access and smart geospatial navigation for rural and urban India">
-<title>ROUTIQ HEALTH — AI-Powered Healthcare Access &amp; Smart Navigation</title>
+<title>RiskWay — Smart Risk Mapping &amp; Safe Route Intelligence</title>
 <link rel="manifest" href="manifest.json">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css">
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -21,10 +22,10 @@
     <!-- Brand Header -->
     <div class="brand">
       <div class="brand-top">
-        <div class="mark">RH</div>
+        <div class="mark">RW</div>
         <div>
-          <h1>ROUTIQ HEALTH</h1>
-          <p>AI Healthcare Access &amp; Smart Navigation</p>
+          <h1>RiskWay</h1>
+          <p>Risk Mapping &amp; Safe Route Intelligence</p>
         </div>
       </div>
       <div class="connectivity-bar">
@@ -380,9 +381,12 @@
   <div id="map-wrap">
     <!-- Top Floating Status Overlay -->
     <div class="top-status">
-      <div class="ts-item"><span class="pulse"></span><b>ROUTIQ Geospatial Engine</b></div>
+      <div class="ts-item"><span class="pulse"></span><b>Live scan</b></div>
       <div class="ts-item">Network Nodes: <b id="stat-zones">140</b></div>
+      <div class="ts-item">Zones Tracked: <b id="stat-risk-zones">5</b></div>
+      <div class="ts-item">Road Segments: <b id="stat-edges">—</b></div>
       <div class="ts-item">Facilities Tracked: <b id="stat-fac-count">6</b></div>
+      <div class="ts-item">Mode: <b id="stat-mode">Civilian</b></div>
       <div class="ts-item">Connectivity: <b id="stat-conn" style="color:var(--emerald);">ONLINE (Live)</b></div>
     </div>
 
@@ -427,6 +431,7 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
 <script>
   window.routiqMapsReady = new Promise(resolve => {
     const loadApp = () => {

@@ -405,25 +405,39 @@ const googleMapStyles = [
   { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#071522' }] },
   { featureType: 'poi', elementType: 'geometry', stylers: [{ color: '#172638' }] }
 ];
-const map = window.googleMapsUnavailable || !window.google
-  ? null
-  : new google.maps.Map(document.getElementById('map'), {
+const usingGoogleMaps = !window.googleMapsUnavailable && !!window.google;
+const map = usingGoogleMaps
+  ? new google.maps.Map(document.getElementById('map'), {
       center: { lat: 12.9165, lng: 79.1325 }, zoom: 12, mapId: 'DEMO_MAP_ID',
       styles: googleMapStyles, streetViewControl: false, fullscreenControl: false,
       mapTypeControl: false
-    });
+    })
+  : L.map('map', { zoomControl: true }).setView([12.9165, 79.1325], 12);
+if (!usingGoogleMaps) {
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; OpenStreetMap contributors', maxZoom: 19
+  }).addTo(map);
+}
 function setMapView(lat, lng, zoom) {
-  if (!map) return;
-  map.setCenter({ lat, lng });
-  if (zoom !== undefined) map.setZoom(zoom);
+  if (usingGoogleMaps) {
+    map.setCenter({ lat, lng });
+    if (zoom !== undefined) map.setZoom(zoom);
+  } else {
+    map.setView([lat, lng], zoom === undefined ? map.getZoom() : zoom);
+  }
 }
 function removeMapObject(object) {
   if (!object) return;
-  if (typeof object.setMap === 'function') object.setMap(null);
-  else object.map = null;
+  if (usingGoogleMaps) object.setMap(null);
+  else map.removeLayer(object);
 }
 function createGoogleMarker(lat, lng, html, title, popupHtml) {
-  if (!map || !google.maps.marker) return null;
+  if (!usingGoogleMaps) {
+    const marker = L.marker([lat, lng], { icon: L.divIcon({ className: 'divicon-marker', html, iconSize: [24, 24] }) }).addTo(map);
+    if (popupHtml) marker.bindPopup(popupHtml);
+    return marker;
+  }
+  if (!google.maps.marker) return null;
   const content = document.createElement('div');
   content.className = 'divicon-marker';
   content.innerHTML = html;
@@ -435,7 +449,14 @@ function createGoogleMarker(lat, lng, html, title, popupHtml) {
   return marker;
 }
 function createGoogleCircle(options, popupHtml) {
-  if (!map) return null;
+  if (!usingGoogleMaps) {
+    const circle = L.circle([options.center.lat, options.center.lng], {
+      radius: options.radius, color: options.strokeColor, weight: options.strokeWeight,
+      fillColor: options.fillColor, fillOpacity: options.fillOpacity
+    }).addTo(map);
+    if (popupHtml) circle.bindPopup(popupHtml);
+    return circle;
+  }
   const circle = new google.maps.Circle({ ...options, map });
   if (popupHtml) {
     const info = new google.maps.InfoWindow({ content: popupHtml });
@@ -448,7 +469,7 @@ function updateMapAvailability() {
   const banner = document.getElementById('offline-banner');
   const mapElement = document.getElementById('map');
   const localOffline = typeof isOfflineMode !== 'undefined' && (isOfflineMode || window.demoMode);
-  const unavailable = !navigator.onLine || !map || localOffline;
+  const unavailable = !navigator.onLine;
   if (banner) banner.style.display = unavailable ? 'flex' : 'none';
   if (mapElement) mapElement.style.display = unavailable ? 'none' : 'block';
   const statConn = document.getElementById('stat-conn');
@@ -531,6 +552,8 @@ function renderFacilityMarkers() {
 renderFacilityMarkers();
 
 document.getElementById('stat-fac-count').textContent = facilities.length;
+document.getElementById('stat-risk-zones').textContent = zones.length;
+document.getElementById('stat-edges').textContent = edges.length;
 
 // Start & Target Location Selection State
 let pickMode = 'start';
@@ -581,9 +604,7 @@ function nearestNode(lat, lng) {
   return best;
 }
 
-if (map) map.addListener('click', (e) => {
-  const clickLat = e.latLng.lat();
-  const clickLng = e.latLng.lng();
+const handleMapClick = (clickLat, clickLng) => {
   if (pickMode === 'start') {
     startLatLng = { lat: clickLat, lng: clickLng };
     const n = nearestNode(clickLat, clickLng);
@@ -604,7 +625,9 @@ if (map) map.addListener('click', (e) => {
     log('Target facility set to ' + targetFacility.name);
     document.getElementById('pick-hint').textContent = 'Facility set: ' + targetFacility.name + '.';
   }
-});
+};
+if (usingGoogleMaps) map.addListener('click', e => handleMapClick(e.latLng.lat(), e.latLng.lng()));
+else map.on('click', e => handleMapClick(e.latlng.lat, e.latlng.lng));
 
 document.getElementById('btn-reset').onclick = () => {
   startLatLng = { lat: 13.0000, lng: 80.0000 };
@@ -627,11 +650,13 @@ document.getElementById('mode-civilian').onclick = () => {
   vehicleMode = 'civilian';
   document.getElementById('mode-civilian').classList.add('active');
   document.getElementById('mode-emergency').classList.remove('active');
+  document.getElementById('stat-mode').textContent = 'Civilian';
 };
 document.getElementById('mode-emergency').onclick = () => {
   vehicleMode = 'emergency';
   document.getElementById('mode-emergency').classList.add('active');
   document.getElementById('mode-civilian').classList.remove('active');
+  document.getElementById('stat-mode').textContent = 'Emergency';
 };
 document.getElementById('risk-weight').oninput = (e) => {
   document.getElementById('risk-weight-val').textContent = e.target.value;
@@ -797,13 +822,20 @@ async function computeRoutes() {
   removeMapObject(fastestLine);
   removeMapObject(safestLine);
 
-  fastestLine = map ? new google.maps.Polyline({ map, path: fastestRoute.latLngs.map(([lat, lng]) => ({ lat, lng })), strokeColor: '#0ea5e9', strokeWeight: 4, strokeOpacity: 0.85, icons: [{ icon: { path: 'M 0,-1 0,1' }, offset: '0', repeat: '12px' }] }) : null;
-  safestLine = map ? new google.maps.Polyline({ map, path: safestRoute.latLngs.map(([lat, lng]) => ({ lat, lng })), strokeColor: '#10b981', strokeWeight: 5, strokeOpacity: 0.95 }) : null;
+  if (usingGoogleMaps) {
+    fastestLine = new google.maps.Polyline({ map, path: fastestRoute.latLngs.map(([lat, lng]) => ({ lat, lng })), strokeColor: '#0ea5e9', strokeWeight: 4, strokeOpacity: 0.85, icons: [{ icon: { path: 'M 0,-1 0,1' }, offset: '0', repeat: '12px' }] });
+    safestLine = new google.maps.Polyline({ map, path: safestRoute.latLngs.map(([lat, lng]) => ({ lat, lng })), strokeColor: '#10b981', strokeWeight: 5, strokeOpacity: 0.95 });
+  } else {
+    fastestLine = L.polyline(fastestRoute.latLngs, { color: '#0ea5e9', weight: 4, opacity: 0.85, dashArray: '2 8' }).addTo(map);
+    safestLine = L.polyline(safestRoute.latLngs, { color: '#10b981', weight: 5, opacity: 0.95 }).addTo(map);
+  }
 
-  if (map) {
+  if (usingGoogleMaps) {
     const bounds = new google.maps.LatLngBounds();
     [...fastestRoute.latLngs, ...safestRoute.latLngs].forEach(([lat, lng]) => bounds.extend({ lat, lng }));
     map.fitBounds(bounds, { top: 40, right: 40, bottom: 40, left: 40 });
+  } else {
+    map.fitBounds([...fastestRoute.latLngs, ...safestRoute.latLngs], { padding: [40, 40] });
   }
 
   log(`Routes rendered [${isLiveAPI ? 'LIVE OSRM API' : 'OFFLINE CACHED DB'}]: Recommended Safe (${safestRoute.distKm.toFixed(2)} km, ${Math.round(safestRoute.timeMin)}m) vs Direct (${fastestRoute.distKm.toFixed(2)} km, ${Math.round(fastestRoute.timeMin)}m).`, 't-cyan');
