@@ -11,6 +11,7 @@ app.use(cors());
 app.use(express.json({limit: '32kb'}));
 app.use(express.static(__dirname));
 
+app.get('/health', (_req, res) => res.json({status: 'ok', service: 'routiq-health', facilities: facilities.length}));
 app.get('/facilities', (_req, res) => res.json(facilities));
 app.get('/facilities/:id', (req, res) => {
   const facility = facilities.find(item => item.id === req.params.id);

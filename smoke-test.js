@@ -7,6 +7,8 @@ async function check(path, options) {
 }
 
 (async () => {
+  const health = await check('/health');
+  if (health.status !== 'ok') throw new Error('Health check failed');
   const facilities = await check('/facilities');
   if (!Array.isArray(facilities) || facilities.length < 30) throw new Error('Facility seed is incomplete');
   const facility = await check('/facilities/' + facilities[0].id);

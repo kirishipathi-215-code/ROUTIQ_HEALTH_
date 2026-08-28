@@ -145,6 +145,7 @@ Browser PWA
 | `GET` | `/facilities/:id` | Return one facility record |
 | `POST` | `/triage` | Securely proxy Claude CDSS triage |
 | `POST` | `/analyst` | Securely proxy analyst questions |
+| `GET` | `/health` | Deployment health check |
 
 The browser never receives `ANTHROPIC_API_KEY`; it only calls the local proxy endpoints.
 
