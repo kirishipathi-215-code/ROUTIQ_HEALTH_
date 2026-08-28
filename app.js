@@ -132,10 +132,13 @@ const facilities = [
 ];
 
 // Keep startup deterministic, then replace the bootstrap data with the API dataset.
-async function refreshFacilitiesFromBackend() {
+let selectedRegion = 'all';
+
+async function refreshFacilitiesFromBackend(region = selectedRegion) {
   if (window.demoMode || !navigator.onLine) return;
   try {
-    const response = await fetch('/facilities', { headers: { Accept: 'application/json' } });
+    const query = region && region !== 'all' ? `?region=${encodeURIComponent(region)}` : '';
+    const response = await fetch('/facilities' + query, { headers: { Accept: 'application/json' } });
     if (!response.ok) throw new Error('Facility API HTTP ' + response.status);
     const records = await response.json();
     if (!Array.isArray(records) || records.length < 1) throw new Error('Facility API returned no records');
@@ -145,7 +148,7 @@ async function refreshFacilitiesFromBackend() {
     document.getElementById('stat-fac-count').textContent = facilities.length;
     if (typeof renderFacilitiesDirectory === 'function') renderFacilitiesDirectory();
     if (typeof updateImpactMetrics === 'function') updateImpactMetrics();
-    log('Facility API sync complete: ' + facilities.length + ' facilities loaded.', 't-cyan');
+    log('Facility API sync complete: ' + facilities.length + ' facilities loaded for ' + region + '.', 't-cyan');
   } catch (error) {
     log('Facility API unavailable: ' + error.message + '. Using bundled/cache data.', 't-amber');
   }
@@ -463,6 +466,26 @@ let endMarker = L.marker([targetFacility.lat, targetFacility.lng], {
 }).addTo(map);
 
 let fastestLine = null, safestLine = null;
+
+function applyRegionView(region) {
+  selectedRegion = region;
+  if (region === 'vellore') {
+    map.setView([12.9165, 79.1325], 12);
+  } else if (region === 'kancheepuram') {
+    map.setView([12.8333, 79.7000], 11);
+  } else {
+    map.setView([13.0200, 80.1800], 11);
+  }
+  refreshFacilitiesFromBackend(region);
+}
+
+const regionSelect = document.getElementById('region-select');
+if (regionSelect) {
+  regionSelect.value = 'all';
+  regionSelect.addEventListener('change', event => {
+    applyRegionView(event.target.value);
+  });
+}
 
 function setPickMode(mode) {
   pickMode = mode;

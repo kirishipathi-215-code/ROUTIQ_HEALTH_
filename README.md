@@ -115,7 +115,8 @@ To take **ROUTIQ HEALTH** from its current high-fidelity working prototype to a 
 1. Install Node.js 18+.
 2. Run `npm install`.
 3. Copy `.env.example` to `.env` and set `ANTHROPIC_API_KEY` for live CDSS.
-4. Run `npm start` and open `http://localhost:8080`.
+4. Add `GOOGLE_MAPS_API_KEY` if you want to regenerate the Vellore hospital seed from Google Places.
+5. Run `npm start` and open `http://localhost:8080`.
 
 With the server running, execute `npm run smoke-test` to verify the facility API contract.
 
@@ -126,6 +127,17 @@ Demo Mode works without an API key and forces the bundled facility data, cached 
 This repository includes `render.yaml` for Render. Create a web service from the repository, add `ANTHROPIC_API_KEY` as a secret, and deploy with the generated Node start command.
 
 The initial facility seed covers Kancheepuram, Chengalpattu, and Chennai using the published district hospital directories and government facility listings; facility details should be revalidated by the deployment owner before production use.
+
+### Vellore seed regeneration
+
+To refresh the Vellore dataset from Google Places:
+
+1. Obtain a Google Maps Platform API key with Places API enabled.
+2. Put it in your local `.env` as `GOOGLE_MAPS_API_KEY=...`.
+3. Run `node scripts/fetch-vellore-hospitals.js`.
+4. Commit the regenerated `facilities.vellore.seed.json` if you want to update the bundled seed.
+
+Important limitation: Google Places exposes location, address, phone, and business status metadata, but not clinical capability data. ICU, oxygen, Cath Lab, NICU, blood bank, and similar service flags in the Vellore seed must be treated as unverified until manually checked. This limitation should be disclosed in the SIH presentation rather than hidden.
 
 ## Architecture
 
@@ -141,7 +153,7 @@ Browser PWA
 
 | Method | Endpoint | Purpose |
 |---|---|---|
-| `GET` | `/facilities` | Return the regional facility dataset |
+| `GET` | `/facilities?region=all\|kancheepuram\|vellore` | Return the selected regional facility dataset |
 | `GET` | `/facilities/:id` | Return one facility record |
 | `POST` | `/triage` | Securely proxy Claude CDSS triage |
 | `POST` | `/analyst` | Securely proxy analyst questions |
