@@ -6,15 +6,38 @@ require('dotenv').config();
 
 const app = express();
 const port = process.env.PORT || 8080;
-const facilities = JSON.parse(fs.readFileSync(path.join(__dirname, 'facilities.seed.json'), 'utf8'));
+function loadSeed(fileName) {
+  const filePath = path.join(__dirname, fileName);
+  if (!fs.existsSync(filePath)) return [];
+  const records = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+  return Array.isArray(records) ? records : [];
+}
+
+const seededFacilities = [
+  ...loadSeed('facilities.seed.json').map(facility => ({ ...facility, region: 'kancheepuram' })),
+  ...loadSeed('facilities.vellore.seed.json').map(facility => ({ ...facility, region: 'vellore' }))
+];
 app.use(cors());
 app.use(express.json({limit: '32kb'}));
 app.use(express.static(__dirname));
 
-app.get('/health', (_req, res) => res.json({status: 'ok', service: 'routiq-health', facilities: facilities.length}));
-app.get('/facilities', (_req, res) => res.json(facilities));
+app.get('/config', (_req, res) => {
+  res.json({ googleMapsApiKey: process.env.GOOGLE_MAPS_API_KEY || '' });
+});
+
+function filterFacilitiesByRegion(region) {
+  if (region === 'vellore') return seededFacilities.filter(item => item.region === 'vellore');
+  if (region === 'kancheepuram') return seededFacilities.filter(item => item.region === 'kancheepuram');
+  return seededFacilities;
+}
+
+app.get('/health', (_req, res) => res.json({status: 'ok', service: 'routiq-health', facilities: seededFacilities.length}));
+app.get('/facilities', (req, res) => {
+  const region = String(req.query.region || 'all').toLowerCase();
+  res.json(filterFacilitiesByRegion(region));
+});
 app.get('/facilities/:id', (req, res) => {
-  const facility = facilities.find(item => item.id === req.params.id);
+  const facility = seededFacilities.find(item => item.id === req.params.id);
   if (!facility) return res.status(404).json({error: 'Facility not found'});
   res.json(facility);
 });
