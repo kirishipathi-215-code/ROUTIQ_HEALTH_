@@ -1,0 +1,9 @@
+flowchart LR
+    Browser[Browser PWA] --> Local[IndexedDB + AES-GCM\nOffline facilities / triage / routes]
+    Browser --> Maps[Google Maps / OSRM / Nominatim]
+    Browser --> API[REST API\n/facilities\n/facilities/:id\n/triage\n/analyst\n/health]
+    API --> Node[Node/Express proxy]
+    Node --> Claude[Anthropic Claude\nserver-side API key only]
+
+    Browser -. live map services .-> Maps
+    Browser -. local cache .-> Local

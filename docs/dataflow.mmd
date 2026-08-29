@@ -1,0 +1,8 @@
+flowchart LR
+    User[User location + symptoms] --> Triage[Triage engine]
+    Triage --> Suit[Facility suitability / ranking engine]
+    User --> Router[Geospatial risk-aware Dijkstra router]
+    Suit --> Router
+    Router --> Route[Safe route navigation]
+    Route --> Online[Online OSRM route]
+    Route --> Offline[Offline cached Dijkstra route]

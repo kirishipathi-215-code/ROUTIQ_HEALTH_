@@ -396,6 +396,8 @@ function rankFacilities(startPos, triage, filterGovt, filterIcu, filterOxygen) {
 }
 
 // ---------- 8. Google Maps Setup & Markers ----------
+let isOfflineMode = false;
+window.demoMode = false;
 const googleMapStyles = [
   { elementType: 'geometry', stylers: [{ color: '#111b2a' }] },
   { elementType: 'labels.text.fill', stylers: [{ color: '#9fb0c4' }] },
@@ -412,11 +414,12 @@ const map = usingGoogleMaps
       styles: googleMapStyles, streetViewControl: false, fullscreenControl: false,
       mapTypeControl: false
     })
-  : L.map('map', { zoomControl: true }).setView([12.9165, 79.1325], 12);
+  : L.map('map', { zoomControl: false }).setView([12.9165, 79.1325], 12);
 if (!usingGoogleMaps) {
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '&copy; OpenStreetMap contributors', maxZoom: 19
   }).addTo(map);
+  L.control.zoom({ position: 'topleft' }).addTo(map);
 }
 function setMapView(lat, lng, zoom) {
   if (usingGoogleMaps) {
@@ -677,9 +680,6 @@ log('Real-world OpenStreetMap (OSRM & Nominatim) API channels initialized.', 't-
 log('Geospatial risk zones mapped to Tamil Nadu road corridor.', 't-amber');
 
 // ---------- 11. PHASE 2: OSRM Real Routing API Engine & Fallback ----------
-let isOfflineMode = false;
-window.demoMode = false;
-
 function speedFnFor(mode, riskScore) {
   const norm = Math.min(riskScore / 10, 1);
   const base = mode === 'emergency' ? 58 : 38;
@@ -1157,15 +1157,85 @@ document.getElementById('demo-mode-toggle').onchange = (event) => {
   computeRoutes();
 };
 
-document.getElementById('btn-sync').onclick = () => {
-  log('Initiating database sync with central health server...');
-  setTimeout(() => {
+window.__syncRequestId = 0;
+
+async function syncFacilitiesFromBackendWithFallback(region = selectedRegion) {
+  const requestId = ++window.__syncRequestId;
+  const targetRegion = region || selectedRegion || 'all';
+  const syncStatus = document.getElementById('facility-db-sync-time');
+  const query = targetRegion && targetRegion !== 'all' ? `?region=${encodeURIComponent(targetRegion)}` : '';
+  log('Initiating database sync with central health server...', 't-cyan');
+
+  try {
+    if (window.demoMode || !navigator.onLine) {
+      throw new Error('live sync unavailable while offline or demo mode is active');
+    }
+
+    const response = await fetch('/facilities' + query, {
+      headers: { Accept: 'application/json' },
+      signal: AbortSignal.timeout(12000)
+    });
+    if (!response.ok) throw new Error('Facility API HTTP ' + response.status);
+    const records = await response.json();
+    if (!Array.isArray(records) || records.length === 0) throw new Error('Facility API returned no valid records');
+
+    const nextFacilities = records.map(fac => ({ ...fac, nodeId: fac.nodeId ?? nearestNode(fac.lat, fac.lng).id }));
+    if (requestId !== window.__syncRequestId) return false;
+    facilities.splice(0, facilities.length, ...nextFacilities);
+    renderFacilityMarkers();
+    renderFacilitiesDirectory();
+    updateImpactMetrics();
+    if (typeof syncFacilitiesToDB === 'function') {
+      await syncFacilitiesToDB();
+    }
     const nowStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    document.getElementById('facility-db-sync-time').textContent = 'Synced just now (' + nowStr + ')';
-    log('Database sync complete: regional facilities & OpenStreetMap road vectors updated.', 't-cyan');
-    alert('Healthcare facility database and map geometry successfully synchronized!');
-  }, 600);
-};
+    if (syncStatus) syncStatus.textContent = 'Synced just now (' + nowStr + ')';
+    document.getElementById('stat-fac-count').textContent = facilities.length;
+    log('Database sync complete: regional facilities updated from API for ' + targetRegion + '.', 't-cyan');
+    return true;
+  } catch (error) {
+    if (requestId !== window.__syncRequestId) return false;
+    log('Facility sync from backend failed: ' + error.message + '. Falling back to cached local facilities.', 't-amber');
+    try {
+      if (typeof dbReadAll === 'function') {
+        const cached = await dbReadAll('facilities');
+        if (Array.isArray(cached) && cached.length > 0) {
+          facilities.splice(0, facilities.length, ...cached.map(fac => ({ ...fac, nodeId: fac.nodeId ?? nearestNode(fac.lat, fac.lng).id })));
+          renderFacilityMarkers();
+          renderFacilitiesDirectory();
+          updateImpactMetrics();
+          document.getElementById('stat-fac-count').textContent = facilities.length;
+          if (syncStatus) syncStatus.textContent = 'Using local cached data';
+          return true;
+        }
+      }
+    } catch (_) {
+      // ignore cache fallback failure
+    }
+    if (syncStatus) syncStatus.textContent = 'Using bundled data';
+    return false;
+  }
+}
+
+const syncButton = document.getElementById('btn-sync');
+if (syncButton) {
+  syncButton.addEventListener('click', () => {
+    syncFacilitiesFromBackendWithFallback(selectedRegion || 'all');
+  });
+}
+
+window.addEventListener('online', () => {
+  log('Browser online event detected; live services may resume.', 't-cyan');
+  updateMapAvailability();
+  if (!window.demoMode) {
+    syncFacilitiesFromBackendWithFallback(selectedRegion || 'all');
+  }
+});
+
+window.addEventListener('offline', () => {
+  log('Browser offline event detected; cached/local services active.', 't-amber');
+  updateMapAvailability();
+});
 
 // ---------- 16. Sidebar Tab Switcher ----------
 function switchTab(tabId) {

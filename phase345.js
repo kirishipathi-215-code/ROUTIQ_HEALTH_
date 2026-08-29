@@ -116,6 +116,36 @@ async function dbGet(storeName, key) {
   });
 }
 
+async function dbReadAll(storeName) {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(storeName, 'readonly');
+    const req = tx.objectStore(storeName).getAll();
+    req.onsuccess = async () => {
+      const rows = Array.isArray(req.result) ? req.result : [];
+      const decrypted = [];
+      for (const row of rows) {
+        try {
+          const plain = await decryptFromDB(row._enc);
+          if (plain != null) decrypted.push(plain);
+        } catch (_) {
+          // ignore invalid encrypted rows
+        }
+      }
+      resolve(decrypted);
+    };
+    req.onerror = () => reject(req.error);
+  });
+}
+
+async function dbPutSetting(key, value) {
+  return dbPut('settings', { id: key, value });
+}
+
+async function dbGetSetting(key) {
+  return dbGet('settings', key);
+}
+
 // 3-D  Sync all facilities into IndexedDB ------------------------------------
 async function syncFacilitiesToDB() {
   try {
