@@ -1093,7 +1093,8 @@ input[type="range"] {
 .top-status {
   position: absolute;
   top: 14px;
-  left: 14px;
+  right: 14px;
+  left: auto;
   z-index: 500;
   background: rgba(13, 20, 30, 0.92);
   border: 1px solid var(--border);
@@ -1104,6 +1105,7 @@ input[type="range"] {
   color: var(--text-dim);
   display: flex;
   gap: 16px;
+  -webkit-backdrop-filter: blur(8px);
   backdrop-filter: blur(8px);
   box-shadow: 0 4px 16px rgba(0,0,0,0.4);
 }
